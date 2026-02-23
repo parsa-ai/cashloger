@@ -13,16 +13,21 @@ import {
     ChartContainer,
     ChartLegend,
     ChartLegendContent,
-    type ChartConfig,
 } from "@/components/ui/chart"
 import { chartConfig } from "@/lib/chartConfigs"
-import { useChartStore } from "@/store/useChartStore"
+import { useLogStore } from "@/store/useChartStore"
+import { convertToChartItem } from "@/lib/utils"
+import { categories } from "@/lib/data"
 
 export const description = "A pie chart with a label"
 
 
 export function ChartPieLabelList() {
-    const chartData = useChartStore((state) => state.chartData)
+    const logs = useLogStore((state) => state.logs)
+    const currentYear = new Date().getFullYear().toString();
+    const currentMonth = (new Date().getMonth() + 1).toString().padStart(2, "0");
+    const monthlyLog = logs.find(log => log.year === currentYear)?.months.find(month => month.month === currentMonth)
+    const chartData = monthlyLog ? convertToChartItem(monthlyLog, categories) : []
     const isEmpty = chartData.every((entry: any) => entry.visitors === 0)
     if (isEmpty) {
         return (
@@ -65,9 +70,9 @@ export function ChartPieLabelList() {
                                     </text>
                                 )
                             }}
-                            labelLine={false} nameKey="browser" />
+                            labelLine={false} nameKey="category" />
                         <ChartLegend
-                            content={<ChartLegendContent nameKey="browser" />}
+                            content={<ChartLegendContent nameKey="category" />}
                             className="translate-y-10 flex-wrap gap-2  *:justify-center"
                         />
                     </PieChart>

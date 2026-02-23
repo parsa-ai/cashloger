@@ -277,33 +277,27 @@ function ChartLegendContent({
         className
       )}
     >
-        {payload
-      .filter((item) => item.type !== "none")
-      .map((item) => {
-        const key = `${nameKey || item.dataKey || "value"}`
-        const itemConfig = getPayloadConfigFromPayload(config, item, key)
-        const visitors = (item as any)?.payload?.payload?.visitors
-        if (visitors === 0) {
-          return null;
-        }
-        return (
-          <div
-            key={`${item.value}-${item.color}`}
-            className={cn(
-              "[&>svg]:text-muted-foreground flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3"
-            )}
-          >
-              {itemConfig?.icon && !hideIcon ? (
-                <itemConfig.icon />
-              ) : (
-                <div
-                  className="h-2 w-2 shrink-0 rounded-[2px]"
-                  style={{
-                    backgroundColor: item.color,
-                  }}
-                />
+      {payload
+        .filter((item) => item.type !== "none")
+        .map((item) => {
+          const visitors = (item as any)?.payload?.payload?.visitors
+          if (visitors === 0) {
+            return null;
+          }
+          return (
+            <div
+              key={`${item.value}-${item.color}`}
+              className={cn(
+                "[&>svg]:text-muted-foreground flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3"
               )}
-              {itemConfig?.label}
+            >
+              <div
+                className="h-2 w-2 shrink-0 rounded-[2px]"
+                style={{
+                  backgroundColor: item.color,
+                }}
+              />
+              {item.value}
             </div>
           )
         })}

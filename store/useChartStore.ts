@@ -1,64 +1,79 @@
+import { LogStore } from "@/lib/types";
+import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 
-import { create } from "zustand"
-import { persist, createJSONStorage } from "zustand/middleware"
-
-type ChartItem = {
-  browser: string
-  visitors: number
-  fill: string
-}
-
-type ChartStore = {
-  chartData: ChartItem[]
-  increase: (browser: string, amount?: number) => void
-  decrease: (browser: string, amount?: number) => void
-  reset: () => void
-}
-
-const initialData: ChartItem[] = [
-  { browser: "fun", visitors: 0, fill: "var(--color-fun)" },
-  { browser: "transportation", visitors: 0, fill: "var(--color-transportation)" },
-  { browser: "cloths", visitors: 0, fill: "var(--color-cloths)" },
-  { browser: "eats", visitors: 0, fill: "var(--color-eats)" },
-  { browser: "saveing", visitors: 0, fill: "var(--color-saveing)" },
-  { browser: "home", visitors: 0, fill: "var(--color-home)" },
-  { browser: "car", visitors: 0, fill: "var(--color-car)" },
-  { browser: "gift", visitors: 0, fill: "var(--color-gift)" },
-  { browser: "health", visitors: 0, fill: "var(--color-health)" },
-  { browser: "other", visitors: 0, fill: "var(--color-other)" },
-]
-
-export const useChartStore = create<ChartStore>()(
+export const useLogStore = create<LogStore>()(
   persist(
-    (set) => ({
-      chartData: initialData,
+    (set, get) => ({
+      logs: [],
 
-      increase: (browser, amount = 1) =>
-        set((state) => ({
-          chartData: state.chartData.map((item) =>
-            item.browser === browser
-              ? { ...item, visitors: item.visitors + amount }
-              : item
-          ),
-        })),
+      addLog: (entry) => {
+        const year = entry.date.getFullYear().toString();
+        const month = (entry.date.getMonth() + 1).toString().padStart(2, "0");
 
-      decrease: (browser, amount = 1) =>
-        set((state) => ({
-          chartData: state.chartData.map((item) =>
-            item.browser === browser
-              ? {
-                  ...item,
-                  visitors: Math.max(0, item.visitors - amount),
-                }
-              : item
-          ),
-        })),
+        set((state) => {
+          const logsCopy = [...state.logs];
 
-      reset: () => set({ chartData: initialData }),
+          let yearIndex = logsCopy.findIndex((y) => y.year === year);
+
+          if (yearIndex === -1) {
+            logsCopy.push({
+              year,
+              months: [
+                {
+                  month,
+                  entries: [entry],
+                },
+              ],
+            });
+
+            return { logs: logsCopy };
+          }
+
+          const yearData = logsCopy[yearIndex];
+          let monthIndex = yearData.months.findIndex(
+            (m) => m.month === month
+          );
+
+          if (monthIndex === -1) {
+            yearData.months.push({
+              month,
+              entries: [entry],
+            });
+          } else {
+            yearData.months[monthIndex].entries.push(entry);
+          }
+
+          logsCopy[yearIndex] = { ...yearData };
+
+          return { logs: logsCopy };
+        });
+      },
+
+      clearLogs: () => set({ logs: [] }),
     }),
     {
-      name: "chart-storage",
+      name: "visitor-log-storage",
       storage: createJSONStorage(() => localStorage),
+
+      partialize: (state) => ({
+        logs: state.logs,
+      }),
+
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+
+        state.logs = state.logs.map((year) => ({
+          ...year,
+          months: year.months.map((month) => ({
+            ...month,
+            entries: month.entries.map((entry) => ({
+              ...entry,
+              date: new Date(entry.date),
+            })),
+          })),
+        }));
+      },
     }
   )
-)
+);
