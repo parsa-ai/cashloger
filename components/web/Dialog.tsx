@@ -27,6 +27,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { ButtonGroup } from "@/components/ui/button-group"
 import { chartConfig } from "@/lib/chartConfigs"
 import { useLogStore } from "@/store/useChartStore"
+import useDateStore from "@/store/useYearStore"
+import { getPersianYearMonth } from "@/lib/utils"
+import { da } from "react-day-picker/locale"
 
 export function DialogBox() {
     type ChartKey = Exclude<keyof typeof chartConfig, "visitors">
@@ -47,26 +50,24 @@ export function DialogBox() {
     const logs = useLogStore((s) => s.logs)
     const addLog = useLogStore((s) => s.addLog)
 
-    /**
-     * محاسبه مجموع هر دسته برای نمایش کنار SelectItem
-     */
+    const date = useDateStore((s) => s.date) || new Date()
+
+    const { month } = getPersianYearMonth(date)
+    const monthData = logs.find(log => log.year === getPersianYearMonth(date).year)?.months.find(m => m.month === month)
+    console.log(monthData);
+    
     const categoryTotals = useMemo(() => {
         const totals: Record<string, number> = {}
 
-        logs.forEach((year) => {
-            year.months.forEach((month) => {
-                month.entries.forEach((entry) => {
-                    if (!totals[entry.key]) {
-                        totals[entry.key] = 0
-                    }
 
-                    totals[entry.key] +=
-                        entry.mode === "increase"
-                            ? entry.visitors
-                            : -entry.visitors
-                })
-            })
+        monthData?.entries.forEach((entry) => {
+            if (!totals[entry.key]) {
+                totals[entry.key] = 0
+            }
+            totals[entry.key] += entry.visitors
         })
+
+
 
         return totals
     }, [logs])
@@ -77,11 +78,11 @@ export function DialogBox() {
         if (!numericAmount || numericAmount <= 0) return
 
         addLog({
-            key: category, 
-            date: new Date(),
+            key: category,
+            date: date || new Date(),
             visitors: numericAmount,
             description,
-            mode : "increase", 
+            mode: "increase",
         })
 
         setAmount("")

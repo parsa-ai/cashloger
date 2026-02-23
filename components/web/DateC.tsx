@@ -10,10 +10,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import useDateStore from "@/store/useYearStore"
 
 export function DateC() {
   const [open, setOpen] = useState(false)
-  const [date, setDate] = useState<Date | undefined>(new Date())
+  const date = useDateStore((s) => s.date) || new Date()
+  const setDate = useDateStore((s) => s.setDate)
   return (
     <Field className="w-full">
       <Popover open={open} onOpenChange={setOpen}>
@@ -33,8 +35,10 @@ export function DateC() {
             defaultMonth={date}
             captionLayout="dropdown"
             onSelect={(date) => {
-              setDate(date)
-              setOpen(false)
+              if (date) {
+                setDate(date)
+                setOpen(false)
+              }
             }}
           />
         </PopoverContent>

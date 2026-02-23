@@ -16,25 +16,27 @@ import {
 } from "@/components/ui/chart"
 import { chartConfig } from "@/lib/chartConfigs"
 import { useLogStore } from "@/store/useChartStore"
-import { convertToChartItem } from "@/lib/utils"
+import { convertToChartItem, getPersianYearMonth } from "@/lib/utils"
 import { categories } from "@/lib/data"
+import useDateStore from "@/store/useYearStore"
 
 export const description = "A pie chart with a label"
 
 
 export function ChartPieLabelList() {
     const logs = useLogStore((state) => state.logs)
-    const currentYear = new Date().getFullYear().toString();
-    const currentMonth = (new Date().getMonth() + 1).toString().padStart(2, "0");
+    const date = useDateStore((s) => s.date) || new Date()
+    const { year: currentYear, month: currentMonth } = getPersianYearMonth(date);
     const monthlyLog = logs.find(log => log.year === currentYear)?.months.find(month => month.month === currentMonth)
     const chartData = monthlyLog ? convertToChartItem(monthlyLog, categories) : []
     const isEmpty = chartData.every((entry: any) => entry.visitors === 0)
+const cardTitle = date.toLocaleString("fa-IR", { month: "short" })+ " " + date.toLocaleString("fa-IR", { year: "numeric" })
     if (isEmpty) {
         return (
             <Card className="flex flex-col gap-0">
                 <CardHeader className="items-center pb-0 flex">
                     <CardDescription>نمودار خرج های</CardDescription>
-                    <CardTitle>{new Date().toLocaleString("fa-IR", { month: "short" })} ماه</CardTitle>
+                    <CardTitle>{cardTitle}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 pt-5">
                     <div className="text-muted-foreground">هیچ داده‌ای برای نمایش وجود ندارد.</div>
@@ -46,7 +48,7 @@ export function ChartPieLabelList() {
         <Card className="flex flex-col gap-0">
             <CardHeader className="items-center pb-0 flex">
                 <CardDescription>نمودار خرج های</CardDescription>
-                <CardTitle>{new Date().toLocaleString("fa-IR", { month: "short" })} ماه</CardTitle>
+                <CardTitle>{cardTitle}</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 pb-10">
                 <ChartContainer
@@ -59,9 +61,9 @@ export function ChartPieLabelList() {
                                 return (
                                     <text
                                         cx={props.cx}
-                                        cy={props.cy+16}
+                                        cy={props.cy + 16}
                                         x={props.x}
-                                        y={props.y+16}
+                                        y={props.y + 16}
                                         textAnchor={props.textAnchor}
                                         dominantBaseline={props.dominantBaseline}
                                         fill="var(--foreground)"

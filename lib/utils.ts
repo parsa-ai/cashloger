@@ -38,3 +38,17 @@ export function convertToChartItem(monthlyLog: MonthlyLog, categories: Category[
   });
   return chartItems;
 }
+
+export function getPersianYearMonth(date: Date) {
+  const formatter = new Intl.DateTimeFormat("en-US-u-ca-persian", {
+    year: "numeric",
+    month: "2-digit",
+  });
+
+  const parts = formatter.formatToParts(date);
+
+  const year = parts.find(p => p.type === "year")!.value;
+  const month = parts.find(p => p.type === "month")!.value;
+
+  return { year, month };
+}

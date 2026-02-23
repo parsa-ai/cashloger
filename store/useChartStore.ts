@@ -1,4 +1,5 @@
 import { LogStore } from "@/lib/types";
+import { getPersianYearMonth } from "@/lib/utils";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -8,9 +9,7 @@ export const useLogStore = create<LogStore>()(
       logs: [],
 
       addLog: (entry) => {
-        const year = entry.date.getFullYear().toString();
-        const month = (entry.date.getMonth() + 1).toString().padStart(2, "0");
-
+        const { month, year } = getPersianYearMonth(entry.date);
         set((state) => {
           const logsCopy = [...state.logs];
 
