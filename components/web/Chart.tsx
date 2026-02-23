@@ -15,14 +15,14 @@ import {
     ChartLegendContent,
     type ChartConfig,
 } from "@/components/ui/chart"
+import { chartConfig } from "@/lib/chartConfigs"
+import { useChartStore } from "@/store/useChartStore"
 
 export const description = "A pie chart with a label"
-interface ChartPieLabelListProps {
-    chartConfig: ChartConfig,
-    chartData: any
-}
 
-export function ChartPieLabelList({ chartConfig, chartData }: ChartPieLabelListProps) {
+
+export function ChartPieLabelList() {
+    const chartData = useChartStore((state) => state.chartData)
     const isEmpty = chartData.every((entry: any) => entry.visitors === 0)
     if (isEmpty) {
         return (

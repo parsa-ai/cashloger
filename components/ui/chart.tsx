@@ -283,7 +283,6 @@ function ChartLegendContent({
         const key = `${nameKey || item.dataKey || "value"}`
         const itemConfig = getPayloadConfigFromPayload(config, item, key)
         const visitors = (item as any)?.payload?.payload?.visitors
-        console.log(visitors);
         if (visitors === 0) {
           return null;
         }
