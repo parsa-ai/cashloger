@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
+import Nav from "@/components/web/Nav";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -14,17 +15,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fa" dir="rtl" suppressHydrationWarning>
-      <body>
-        <main className="w-full max-w-2xl mx-auto border-x min-h-svh p-4">
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-          {children}
-          </ThemeProvider>
-        </main>
+      <body className="min-h-svh flex flex-col ">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <header className="max-w-2xl w-full mx-auto border-x">
+            <Nav />
+          </header>
+          <main className="px-4 w-full h-full flex-1  max-w-2xl mx-auto border-x py-4">
+            {children}
+          </main>
+        </ThemeProvider>
       </body>
     </html>
   );

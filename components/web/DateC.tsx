@@ -14,6 +14,8 @@ import {
 export function DateC() {
   const [open, setOpen] = useState(false)
   const [date, setDate] = useState<Date | undefined>(new Date())
+  console.log(date);
+  
   return (
     <Field className="w-full">
       <Popover open={open} onOpenChange={setOpen}>

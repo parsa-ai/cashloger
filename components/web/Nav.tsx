@@ -4,7 +4,7 @@ import { DateC } from "./DateC"
 
 function Nav() {
   return (
-    <nav className=" w-full flex gap-4 justify-between items-center pb-4 border-b">
+    <nav className=" w-full flex gap-4 justify-between items-center p-4 border-b">
       <Link href="/">
         <h1 className="text-xl font-bold">کش لاگر</h1>
       </Link>
