@@ -1,10 +1,9 @@
-import CostIncomes from "@/components/web/CostIncomes";
+import { ChartTabs } from "@/components/web/ChartTabs";
 
 export default function Home() {
   return (
     <>
-      <CostIncomes isCosts={true} />
-      <CostIncomes isCosts={false} />
+      <ChartTabs />
     </>
   )
 }
