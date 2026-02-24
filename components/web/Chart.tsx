@@ -14,10 +14,10 @@ import {
     ChartLegend,
     ChartLegendContent,
 } from "@/components/ui/chart"
-import { chartConfig } from "@/lib/chartConfigs"
+import { chartConfig, chartConfigIncome } from "@/lib/chartConfigs"
 import { useLogStore } from "@/store/useChartStore"
 import { convertToChartItem, getPersianYearMonth } from "@/lib/utils"
-import { categories } from "@/lib/data"
+import { categories, categoriesIncome } from "@/lib/data"
 import useDateStore from "@/store/useYearStore"
 
 export const description = "چارت دایره‌ای هزینه‌ها و در امد ها را برای ماه انتخاب شده نمایش می‌دهد."
@@ -27,7 +27,7 @@ export function ChartPieLabelList({isCosts = true}: {isCosts?: boolean}) {
     const date = useDateStore((s) => s.date) || new Date()
     const { year: currentYear, month: currentMonth } = getPersianYearMonth(date);
     const monthlyLog = logs.find(log => log.year === currentYear)?.months.find(month => month.month === currentMonth)
-    const chartData = monthlyLog ? convertToChartItem(monthlyLog, categories, isCosts) : []
+    const chartData = monthlyLog ? convertToChartItem(monthlyLog, isCosts ? categories : categoriesIncome, isCosts) : []
     const isEmpty = chartData.every((entry: any) => entry.visitors === 0)
     const cardTitle = date.toLocaleString("fa-IR", { month: "short" }) + " " + date.toLocaleString("fa-IR", { year: "numeric" })
     const cardDescription = `نمودار ${isCosts ? "هزینه" : "درآمد"} های `
@@ -52,7 +52,7 @@ export function ChartPieLabelList({isCosts = true}: {isCosts?: boolean}) {
             </CardHeader>
             <CardContent className="flex-1 pb-10">
                 <ChartContainer
-                    config={chartConfig}
+                    config={isCosts ? chartConfig : chartConfigIncome}
                     className="[&_.recharts-pie-label-text]:fill-foreground mx-auto aspect-square max-h-90 pb-0"
                 >
                     <PieChart>

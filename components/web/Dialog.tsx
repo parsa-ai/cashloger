@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
-import { chartConfig } from "@/lib/chartConfigs"
+import { chartConfig, chartConfigIncome } from "@/lib/chartConfigs"
 import { getPersianYearMonth } from "@/lib/utils"
 
 import { useLogStore } from "@/store/useChartStore"
@@ -34,7 +34,7 @@ import useDateStore from "@/store/useYearStore"
 export function DialogBox({ isCosts = true }: { isCosts?: boolean }) {
     type ChartKey = Exclude<keyof typeof chartConfig, "visitors">
 
-    const items = Object.entries(chartConfig)
+    const items = Object.entries(isCosts ? chartConfig : chartConfigIncome)
         .filter(([key]) => key !== "visitors") as [
             ChartKey,
             (typeof chartConfig)[ChartKey]
