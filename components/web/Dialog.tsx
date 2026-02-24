@@ -158,6 +158,7 @@ export function DialogBox({ isCosts = true }: { isCosts?: boolean }) {
                             <Textarea
                                 id="description"
                                 placeholder="چیکار کردی پولاتو ؟"
+                                className="max-h-24"
                                 value={description}
                                 onChange={(e) =>
                                     setDescription(e.target.value)

@@ -17,7 +17,6 @@ export function DateC() {
   const date = useDateStore((s) => s.date) || new Date()
   const setDate = useDateStore((s) => s.setDate)
   const isToday = date.toDateString() === new Date().toDateString();
-  console.log(date.toDateString(), new Date().toDateString());
 
   return (
     <div className="flex items-center gap-2">

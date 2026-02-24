@@ -9,10 +9,10 @@ export const categories = [
         fill: "var(--color-fun)"
     },
     {
-        key: "transportation",
-        label: "حمل و نقل",
-        color: "var(--chart-3)",
-        fill: "var(--color-transportation)"
+        key: "gift",
+        label: "قشنگم",
+        color: "var(--chart-9)",
+        fill: "var(--color-gift)"
     },
     {
         key: "cloths",
@@ -45,10 +45,10 @@ export const categories = [
         fill: "var(--color-car)"
     },
     {
-        key: "gift",
-        label: "هدیه",
-        color: "var(--chart-9)",
-        fill: "var(--color-gift)"
+        key: "transportation",
+        label: "حمل و نقل",
+        color: "var(--chart-3)",
+        fill: "var(--color-transportation)"
     },
     {
         key: "health",

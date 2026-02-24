@@ -25,7 +25,7 @@ export default function RootLayout({
           <header className="max-w-2xl w-full mx-auto border-x">
             <Nav />
           </header>
-          <main className="px-4 w-full h-full flex-1  max-w-2xl mx-auto border-x py-4 ">
+          <main className="px-4 w-full h-full flex-1 overflow-y-auto max-h-[calc(100vh-80px)] no-scrollbar max-w-2xl mx-auto border-x py-4 ">
             {children}
           </main>
         </ThemeProvider>
