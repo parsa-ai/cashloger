@@ -30,7 +30,7 @@ export function ChartPieLabelList({isCosts = true}: {isCosts?: boolean}) {
     const chartData = monthlyLog ? convertToChartItem(monthlyLog, categories, isCosts) : []
     const isEmpty = chartData.every((entry: any) => entry.visitors === 0)
     const cardTitle = date.toLocaleString("fa-IR", { month: "short" }) + " " + date.toLocaleString("fa-IR", { year: "numeric" })
-    const cardDescription = `نمودار ${isCosts ? "هزینه" : "درآمد"} های ${cardTitle}`
+    const cardDescription = `نمودار ${isCosts ? "هزینه" : "درآمد"} های `
     if (isEmpty) {
         return (
             <Card className="flex flex-col gap-0">

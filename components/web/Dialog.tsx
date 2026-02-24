@@ -78,6 +78,7 @@ export function DialogBox({ isCosts = true }: { isCosts?: boolean }) {
         if (!numericAmount || numericAmount <= 0) return
 
         addLog({
+            id: crypto.randomUUID(),
             key: category,
             date: date || new Date(),
             visitors: numericAmount,

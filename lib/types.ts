@@ -1,4 +1,5 @@
 export interface LogEntry {
+    id : string;
     key: string;
     date: Date;
     visitors: number;
@@ -16,10 +17,11 @@ export interface YearlyLog {
 }
 
 export interface LogStore {
-  logs: YearlyLog[];
+    logs: YearlyLog[];
 
-  addLog: (entry: LogEntry) => void;
-  clearLogs: () => void;
+    addLog: (entry: LogEntry) => void;
+    removeLog: (id: string) => void;
+    updateLog: (entry: LogEntry) => void;
 }
 
 export interface Category {
