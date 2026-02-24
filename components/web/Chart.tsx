@@ -20,22 +20,22 @@ import { convertToChartItem, getPersianYearMonth } from "@/lib/utils"
 import { categories } from "@/lib/data"
 import useDateStore from "@/store/useYearStore"
 
-export const description = "A pie chart with a label"
+export const description = "چارت دایره‌ای هزینه‌ها و در امد ها را برای ماه انتخاب شده نمایش می‌دهد."
 
-
-export function ChartPieLabelList() {
+export function ChartPieLabelList({isCosts = true}: {isCosts?: boolean}) {
     const logs = useLogStore((state) => state.logs)
     const date = useDateStore((s) => s.date) || new Date()
     const { year: currentYear, month: currentMonth } = getPersianYearMonth(date);
     const monthlyLog = logs.find(log => log.year === currentYear)?.months.find(month => month.month === currentMonth)
-    const chartData = monthlyLog ? convertToChartItem(monthlyLog, categories) : []
+    const chartData = monthlyLog ? convertToChartItem(monthlyLog, categories, isCosts) : []
     const isEmpty = chartData.every((entry: any) => entry.visitors === 0)
-const cardTitle = date.toLocaleString("fa-IR", { month: "short" })+ " " + date.toLocaleString("fa-IR", { year: "numeric" })
+    const cardTitle = date.toLocaleString("fa-IR", { month: "short" }) + " " + date.toLocaleString("fa-IR", { year: "numeric" })
+    const cardDescription = `نمودار ${isCosts ? "هزینه" : "درآمد"} های ${cardTitle}`
     if (isEmpty) {
         return (
             <Card className="flex flex-col gap-0">
                 <CardHeader className="items-center pb-0 flex">
-                    <CardDescription>نمودار خرج های</CardDescription>
+                    <CardDescription>{cardDescription}</CardDescription>
                     <CardTitle>{cardTitle}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 pt-5">
@@ -47,7 +47,7 @@ const cardTitle = date.toLocaleString("fa-IR", { month: "short" })+ " " + date.t
     return (
         <Card className="flex flex-col gap-0">
             <CardHeader className="items-center pb-0 flex">
-                <CardDescription>نمودار خرج های</CardDescription>
+                <CardDescription>{cardDescription}</CardDescription>
                 <CardTitle>{cardTitle}</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 pb-10">
@@ -58,6 +58,7 @@ const cardTitle = date.toLocaleString("fa-IR", { month: "short" })+ " " + date.t
                     <PieChart>
                         <Pie className="translate-y-4" data={chartData} dataKey="visitors"
                             label={({ payload, ...props }) => {
+                                if (payload.visitors === 0) return null
                                 return (
                                     <text
                                         cx={props.cx}

@@ -20,16 +20,29 @@ export function convertToChartConfig(categories: Category[]) {
   return result;
 }
 
-export function convertToChartItem(monthlyLog: MonthlyLog, categories: Category[]): ChartItem[] {
+export function convertToChartItem(monthlyLog: MonthlyLog, categories: Category[], isCosts = true): ChartItem[] {
   const chartItems: ChartItem[] = [];
   categories.forEach(category => {
     let totalVisitors = 0;
     const fill = category.fill || category.key ? `var(--color-${category.key})` : "var(--color-default)";
-    monthlyLog.entries.forEach(entry => {
-      if (entry.key === category.key) {
-        totalVisitors += entry.visitors;
-      }
-    });
+    if (isCosts) {
+      monthlyLog.entries.forEach(entry => {
+        if (entry.mode === "decrease") {
+          if (entry.key === category.key) {
+            totalVisitors += entry.visitors;
+          }
+        }
+      });
+    }
+    else{
+      monthlyLog.entries.forEach(entry => {
+        if (entry.mode === "increase") {
+          if (entry.key === category.key) {
+            totalVisitors += entry.visitors;
+          }
+        }
+      });
+    }
     chartItems.push({
       category: category.label,
       visitors: totalVisitors,

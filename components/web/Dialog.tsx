@@ -1,10 +1,10 @@
 "use client"
 
-import { FormEvent, useMemo, useState } from "react"
+import { SubmitEvent, useMemo, useState } from "react"
+
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
-    DialogClose,
     DialogContent,
     DialogDescription,
     DialogFooter,
@@ -12,9 +12,6 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
-import { Field, FieldGroup } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
     Select,
     SelectContent,
@@ -23,15 +20,18 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { Field, FieldGroup } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { ButtonGroup } from "@/components/ui/button-group"
+
 import { chartConfig } from "@/lib/chartConfigs"
+import { getPersianYearMonth } from "@/lib/utils"
+
 import { useLogStore } from "@/store/useChartStore"
 import useDateStore from "@/store/useYearStore"
-import { getPersianYearMonth } from "@/lib/utils"
-import { da } from "react-day-picker/locale"
 
-export function DialogBox() {
+export function DialogBox({ isCosts = true }: { isCosts?: boolean }) {
     type ChartKey = Exclude<keyof typeof chartConfig, "visitors">
 
     const items = Object.entries(chartConfig)
@@ -54,25 +54,25 @@ export function DialogBox() {
 
     const { month } = getPersianYearMonth(date)
     const monthData = logs.find(log => log.year === getPersianYearMonth(date).year)?.months.find(m => m.month === month)
-    console.log(monthData);
-    
+
     const categoryTotals = useMemo(() => {
         const totals: Record<string, number> = {}
-
 
         monthData?.entries.forEach((entry) => {
             if (!totals[entry.key]) {
                 totals[entry.key] = 0
             }
-            totals[entry.key] += entry.visitors
+            if (isCosts && entry.mode === "decrease") {
+                totals[entry.key] += entry.visitors
+            }
+            if (!isCosts && entry.mode === "increase") {
+                totals[entry.key] += entry.visitors
+            }
         })
-
-
-
         return totals
-    }, [logs])
+    }, [logs, date])
 
-    const handleSubmit = (e: FormEvent) => {
+    const handleSubmit = (e: SubmitEvent) => {
         e.preventDefault()
         const numericAmount = Number(amount)
         if (!numericAmount || numericAmount <= 0) return
@@ -82,7 +82,7 @@ export function DialogBox() {
             date: date || new Date(),
             visitors: numericAmount,
             description,
-            mode: "increase",
+            mode: isCosts ? "decrease" : "increase",
         })
 
         setAmount("")
@@ -94,15 +94,15 @@ export function DialogBox() {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline">ادیت خرج ها</Button>
+                <Button variant="outline">افزودن {isCosts ? "هزینه" : "درآمد"} جدید</Button>
             </DialogTrigger>
 
             <DialogContent className="sm:max-w-sm">
                 <form onSubmit={handleSubmit}>
                     <DialogHeader className="my-4 items-center">
-                        <DialogTitle>افزودن خرج ها</DialogTitle>
+                        <DialogTitle>افزودن {isCosts ? "هزینه" : "درآمد"} جدید</DialogTitle>
                         <DialogDescription>
-                            اینجا میتونی خرج جدیدت رو اضافه کنی
+                            اینجا میتونی {isCosts ? "هزینه" : "درآمد"} جدیدت رو اضافه کنی
                         </DialogDescription>
                     </DialogHeader>
 
@@ -156,7 +156,7 @@ export function DialogBox() {
                             <Label htmlFor="description">توضیحات</Label>
                             <Textarea
                                 id="description"
-                                placeholder="توضیحات خرج ها"
+                                placeholder="چیکار کردی پولاتو ؟"
                                 value={description}
                                 onChange={(e) =>
                                     setDescription(e.target.value)
@@ -165,16 +165,10 @@ export function DialogBox() {
                         </Field>
                     </FieldGroup>
 
-                    <DialogFooter className="mt-7 justify-between sm:justify-between">
-                        <ButtonGroup dir="ltr">
-                            <Button type="submit" variant="default">
-                                افزودن خرج
-                            </Button>
-                        </ButtonGroup>
-
-                        <DialogClose asChild>
-                            <Button variant="outline">بیخیال</Button>
-                        </DialogClose>
+                    <DialogFooter className="mt-7">
+                        <Button type="submit" variant="default" className="w-full">
+                            افزودن {isCosts ? "هزینه" : "درآمد"}
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
