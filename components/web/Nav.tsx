@@ -1,36 +1,26 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ModeToggle } from '@/components/ui/ModeToggle'
 import { DateC } from './DateC'
 import { Blobatar } from "@blobatar/react";
 import "blobatar/motion.css";
 
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { LogOut, User, Mail, Loader2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 interface UserData {
   email?: string
+  user_metadata?: {
+    full_name?: string
+    name?: string
+  }
 }
 
 function UserMenu({ initialUser }: { initialUser: UserData | null }) {
-  const router = useRouter()
+
   const supabase = createClient()
   const [user, setUser] = useState<UserData | null>(initialUser)
   const [isLoading, setIsLoading] = useState(!initialUser)
-  const [isSigningOut, setIsSigningOut] = useState(false)
 
   useEffect(() => {
     if (initialUser) {
@@ -52,12 +42,7 @@ function UserMenu({ initialUser }: { initialUser: UserData | null }) {
     return () => subscription.unsubscribe()
   }, [supabase, initialUser])
 
-  const handleSignOut = async () => {
-    setIsSigningOut(true)
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
-  }
+  
 
   if (isLoading) {
     return (
@@ -70,35 +55,12 @@ function UserMenu({ initialUser }: { initialUser: UserData | null }) {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <div className=" relative h-8 w-8 rounded-full">
-          <Blobatar
-            animate='always'
-            name={user.email || 'User'}
-          />
-        </div>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex gap-1">
-            <User className="h-4 w-4" />
-            <p className="text-xs font-medium truncate">{user.email}</p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} disabled={isSigningOut}>
-          {isSigningOut ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <>
-              <LogOut className="mr-2 h-4 w-4" />
-              خروج
-            </>
-          )}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Link href="/user" className="relative h-8 w-8 rounded-full cursor-pointer hover:opacity-80 transition-opacity block">
+      <Blobatar
+        animate='always'
+        name={user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'user'}
+      />
+    </Link>
   )
 }
 
@@ -108,12 +70,11 @@ function Nav({ initialUser }: { initialUser: UserData | null }) {
       <Link href="/">
         <h1 className="text-xl font-bold">کش لاگر</h1>
       </Link>
-      <div className="w-max">
-        <DateC />
-      </div>
-      <div className="flex items-center gap-2">
-        <ModeToggle />
-        <UserMenu initialUser={initialUser} />
+      <DateC />
+      <div className="flex items-center gap-4">
+        {initialUser && (
+          <UserMenu initialUser={initialUser} />
+        )}
       </div>
     </nav>
   )
