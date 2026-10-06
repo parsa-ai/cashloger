@@ -3,6 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import Nav from "@/components/web/Nav";
 import AppShell from "@/components/web/AppShell";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -19,17 +20,25 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+};
+
+async function getUser() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return user
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const user = await getUser()
+
   return (
     <html lang="fa" dir="rtl" suppressHydrationWarning>
       <body className="min-h-svh flex flex-col overflow-hidden ">
-        <AppShell>
+        {/* <AppShell> */}
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -37,13 +46,13 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <header className="max-w-2xl w-full mx-auto border-x">
-              <Nav />
+              <Nav initialUser={user} />
             </header>
             <main className="px-4 w-full h-full flex-1 overflow-y-auto max-h-[calc(100vh-80px)] no-scrollbar max-w-2xl mx-auto border-x py-4 ">
               {children}
             </main>
           </ThemeProvider>
-        </AppShell>
+        {/* </AppShell> */}
       </body>
     </html>
   );
