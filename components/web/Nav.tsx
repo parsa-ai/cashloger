@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ModeToggle } from '@/components/ui/ModeToggle'
 import { DateC } from './DateC'
+import { Blobatar } from "@blobatar/react";
+import "blobatar/motion.css";
+
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -69,16 +72,16 @@ function UserMenu({ initialUser }: { initialUser: UserData | null }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`} alt={user.email || ''} />
-            <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
-          </Avatar>
-        </Button>
+        <div className=" relative h-8 w-8 rounded-full">
+          <Blobatar
+            animate='always'
+            name={user.email || 'User'}
+          />
+        </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
+          <div className="flex gap-1">
             <User className="h-4 w-4" />
             <p className="text-xs font-medium truncate">{user.email}</p>
           </div>
