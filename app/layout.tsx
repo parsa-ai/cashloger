@@ -6,6 +6,7 @@ import AppShell from "@/components/web/AppShell";
 import DataLoader from "@/components/web/DataLoader";
 import { AppHeader } from "@/components/web/AppHeader";
 import { InstallPrompt } from "@/components/web/InstallPrompt";
+import { ProfileProvider } from "@/components/web/ProfileProvider";
 import { TransactionSheetHost } from "@/components/web/TransactionSheet";
 import { SwipeNav } from "@/components/web/SwipeNav";
 import { TabBar } from "@/components/web/TabBar";
@@ -42,10 +43,13 @@ export const viewport: Viewport = {
   ],
 };
 
-async function getUser() {
+async function getSession() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  return user
+  if (!user) return { user: null, username: null }
+  // اگر مایگریشن پروفایل هنوز اجرا نشده، فقط بدون نام کاربری ادامه می‌دهیم
+  const { data: profile } = await supabase.from('profiles').select('username').eq('id', user.id).maybeSingle()
+  return { user, username: (profile?.username as string | undefined) ?? null }
 }
 
 export default async function RootLayout({
@@ -53,8 +57,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const user = await getUser()
-  const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "user"
+  const { user, username } = await getSession()
 
   return (
     <html lang="fa" dir="rtl" suppressHydrationWarning className={vazirmatn.variable}>
@@ -68,23 +71,25 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AppShell signedIn={!!user}>
-            <DataLoader userId={user?.id ?? null} />
-            <Toaster />
-            <InstallPrompt />
-            {user ? (
-              <div className="flex min-h-dvh flex-col">
-                <AppHeader userName={userName} />
-                <main className="mx-auto w-full max-w-2xl flex-1 overflow-x-clip px-4 pt-[calc(env(safe-area-inset-top)+68px)] pb-[calc(max(env(safe-area-inset-bottom),12px)+96px)]">
-                  <SwipeNav>{children}</SwipeNav>
-                </main>
-                <TabBar />
-                <TransactionSheetHost />
-              </div>
-            ) : (
-              children
-            )}
-          </AppShell>
+          <ProfileProvider username={username} email={user?.email ?? null}>
+            <AppShell signedIn={!!user}>
+              <DataLoader userId={user?.id ?? null} />
+              <Toaster />
+              <InstallPrompt />
+              {user ? (
+                <div className="flex min-h-dvh flex-col">
+                  <AppHeader />
+                  <main className="mx-auto w-full max-w-2xl flex-1 overflow-x-clip px-4 pt-[calc(env(safe-area-inset-top)+68px)] pb-[calc(max(env(safe-area-inset-bottom),12px)+96px)]">
+                    <SwipeNav>{children}</SwipeNav>
+                  </main>
+                  <TabBar />
+                  <TransactionSheetHost />
+                </div>
+              ) : (
+                children
+              )}
+            </AppShell>
+          </ProfileProvider>
         </ThemeProvider>
       </body>
     </html>

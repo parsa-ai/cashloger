@@ -22,9 +22,10 @@ Gradients: none, except the fade under the status bar that keeps scrolled conten
 The header and tab bar float above the page as `glass` capsules (translucent, blurred, with a light top
 edge), 16px in from the screen sides and clear of the safe areas, like Telegram on iOS.
 
-- Header: round avatar or back button, title capsule (with the Telegram-style sync line), round sync button.
-- Tab bar: full-round capsule whose selection pill can be dragged; the `+` button is its own round button
-  beside it. Swiping the page sideways also changes tab.
+- Header: user blob (or back button) on the right, title capsule in the middle, connection pill on the left.
+  Offline, the pill says «آفلاین» and the user's blob closes its eyes (`sleepy`).
+- Tab bar: full-round capsule whose selection pill can be dragged, with the `+` as a matching glass circle on
+  its right. Swiping the page sideways also changes tab.
 - Toasts are glass pills above the tab bar; destructive or quick actions offer "برگرداندن" (undo) there.
 
 ## Shape and spacing
@@ -61,7 +62,9 @@ Money always uses `.num` (tabular digits) so it doesn't jitter while counting.
 
 ## Avatars
 
-Blobatar is the app's mascot. The user's blob is in the header, the profile and the install prompt.
+Blobatar is the app's mascot. The user's blob is seeded from their username (email until they pick one) and is
+the same everywhere: header, profile, empty states, install prompt, password field. The login screen uses a
+fixed mascot blob that watches the password caret (`components/ui/password-field.tsx`).
 Each category gets a blob face on a circle of its color (`CategoryAvatar`). Empty states use a blob with an
 expression.
 

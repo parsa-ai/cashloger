@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { ChevronLeft, ChevronRight, Delete, PencilLine, Plus, Trash2 } from "lucide-react"
+import { CalendarDays, Delete, PencilLine, Plus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogNav } from "@/components/ui/dialog"
 import { CategoryAvatar } from "@/components/web/Avatars"
+import { PersianCalendar } from "@/components/web/PersianCalendar"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { LogEntry, LogKind } from "@/lib/types"
 import { addDays, cn, defaultEntryDate, formatAmountWords, haptic, isSameDay } from "@/lib/utils"
@@ -90,6 +91,7 @@ function TransactionForm() {
     const [selected, setSelected] = useState<string | null>(entry ? entry.key : null)
     const [date, setDate] = useState(() => entry?.date ?? defaultEntryDate(viewDate))
     const [description, setDescription] = useState(entry?.description ?? "")
+    const [panel, setPanel] = useState<"keypad" | "date">("keypad")
 
     const amount = digits ? Number(digits) : 0
     const isCost = kind === "cost"
@@ -108,8 +110,6 @@ function TransactionForm() {
 
     const category = selected && items.some((c) => c.id === selected) ? selected : entry && kind === (entry.mode === "increase" ? "income" : "cost") ? null : items[0]?.id ?? null
 
-    const today = new Date()
-    const canGoForward = date < today && !isSameDay(date, today)
 
     const close = () => setOpen(false)
 
@@ -194,6 +194,7 @@ function TransactionForm() {
 
             <div className="no-scrollbar flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pb-3">
                 <SegmentedControl
+                    size="lg"
                     value={kind}
                     onChange={(k) => {
                         setKind(k)
@@ -205,9 +206,9 @@ function TransactionForm() {
                     ]}
                 />
 
-                {/* مبلغ */}
-                <div className="flex flex-col items-center py-1">
-                    <p
+                {/* مبلغ؛ لمسش صفحه‌کلید اعداد را برمی‌گرداند */}
+                <button type="button" onClick={() => setPanel("keypad")} className="flex flex-col items-center py-1">
+                    <span
                         className={cn(
                             "num flex items-baseline gap-1.5 text-[40px] leading-tight font-bold",
                             !amount && "text-muted-foreground/40",
@@ -216,12 +217,12 @@ function TransactionForm() {
                     >
                         {amount ? amount.toLocaleString("fa-IR") : "۰"}
                         <span className="text-[15px] font-medium text-muted-foreground">تومان</span>
-                    </p>
-                    <p className="h-5 text-[13px] text-muted-foreground">{words && `${words} تومان`}</p>
-                </div>
+                    </span>
+                    <span className="h-5 text-[13px] text-muted-foreground">{words && `${words} تومان`}</span>
+                </button>
 
-                {/* دسته‌ها: یک ردیف افقی، پرکاربردها اول */}
-                <div className="no-scrollbar -mx-4 flex gap-1 overflow-x-auto px-3">
+                {/* دسته‌ها: تراشه با اسم کامل، پرکاربردها اول */}
+                <div className="no-scrollbar -mx-1 flex max-h-[136px] flex-wrap gap-2 overflow-y-auto px-1 py-0.5">
                     {items.map((item) => {
                         const active = item.id === category
                         return (
@@ -233,76 +234,49 @@ function TransactionForm() {
                                     if (!active) haptic()
                                     setSelected(item.id)
                                 }}
-                                className="press flex w-[68px] shrink-0 flex-col items-center gap-1"
+                                className={cn(
+                                    "press flex h-10 items-center gap-2 rounded-full ps-1 pe-3.5 text-[14px] transition-[background-color,color,box-shadow] duration-200",
+                                    active ? "bg-tint font-semibold text-primary ring-[1.5px] ring-primary" : "bg-card"
+                                )}
                             >
-                                <span
-                                    className={cn(
-                                        "rounded-full p-[3px] ring-2 transition-[box-shadow] duration-200",
-                                        active ? "ring-primary" : "ring-transparent"
-                                    )}
-                                >
-                                    <CategoryAvatar label={item.label} color={item.color} size={44} />
-                                </span>
-                                <span
-                                    className={cn(
-                                        "w-full truncate text-center text-[12px] transition-colors duration-200",
-                                        active ? "font-semibold text-primary" : "text-muted-foreground"
-                                    )}
-                                >
-                                    {item.label}
-                                </span>
+                                <CategoryAvatar label={item.label} color={item.color} size={32} />
+                                {item.label}
                             </button>
                         )
                     })}
                     <Link
                         href="/categories"
                         onClick={close}
-                        className="press flex w-[68px] shrink-0 flex-col items-center gap-1"
+                        className="press flex h-10 items-center gap-1.5 rounded-full border border-dashed border-primary/40 px-3.5 text-[14px] text-primary"
                     >
-                        <span className="p-[3px]">
-                            <span className="grid size-11 place-items-center rounded-full bg-tint text-primary">
-                                <Plus className="size-5" />
-                            </span>
-                        </span>
-                        <span className="text-[12px] text-primary">دسته جدید</span>
+                        <Plus className="size-4" />
+                        دسته جدید
                     </Link>
                 </div>
 
                 {/* تاریخ و توضیح */}
                 <div className="flex items-center gap-2">
-                    <div className="flex h-10 shrink-0 items-center rounded-full bg-card px-1">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                haptic()
-                                setDate((d) => addDays(d, -1))
-                            }}
-                            aria-label="روز قبل"
-                            className="press grid size-8 place-items-center text-primary"
-                        >
-                            <ChevronRight className="size-[18px]" />
-                        </button>
-                        <span key={date.toDateString()} className="min-w-16 animate-fade-in text-center text-[13px] font-medium">
-                            {shortDay(date)}
-                        </span>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                haptic()
-                                setDate((d) => addDays(d, 1))
-                            }}
-                            disabled={!canGoForward}
-                            aria-label="روز بعد"
-                            className="press grid size-8 place-items-center text-primary transition-opacity disabled:opacity-25"
-                        >
-                            <ChevronLeft className="size-[18px]" />
-                        </button>
-                    </div>
-                    <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-full bg-card px-3.5">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            haptic()
+                            setPanel((p) => (p === "date" ? "keypad" : "date"))
+                        }}
+                        aria-expanded={panel === "date"}
+                        className={cn(
+                            "press flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-[14px] font-medium transition-colors duration-200",
+                            panel === "date" ? "bg-primary text-primary-foreground" : "bg-card"
+                        )}
+                    >
+                        <CalendarDays className="size-[18px]" />
+                        <span key={date.toDateString()} className="animate-fade-in">{shortDay(date)}</span>
+                    </button>
+                    <label className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full bg-card px-4">
                         <PencilLine className="size-4 shrink-0 text-muted-foreground" />
                         <input
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
+                            onFocus={() => setPanel("keypad")}
                             onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
                             placeholder="توضیح (اختیاری)"
                             maxLength={500}
@@ -312,7 +286,18 @@ function TransactionForm() {
                     </label>
                 </div>
 
-                <Keypad onKey={pressKey} />
+                {/* صفحه‌کلید اعداد یا تقویم، جای هم */}
+                {panel === "date" ? (
+                    <PersianCalendar
+                        value={date}
+                        onChange={(d) => {
+                            setDate(d)
+                            setPanel("keypad")
+                        }}
+                    />
+                ) : (
+                    <Keypad onKey={pressKey} />
+                )}
 
                 <Button size="lg" className="w-full" disabled={amount <= 0} onClick={submit}>
                     {entry ? "ذخیره تغییرات" : `ثبت ${noun}`}

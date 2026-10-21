@@ -7,6 +7,7 @@ import { happy } from "blobatar/expression"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { UserBlob } from "@/components/web/Avatars"
+import { useBlobName } from "@/components/web/ProfileProvider"
 import { Group, IconTile, Row } from "@/components/web/Group"
 import { haptic } from "@/lib/utils"
 
@@ -53,6 +54,7 @@ function markSeen() {
 
 // پیشنهاد نصب برنامه، فقط بار اول و فقط وقتی هنوز نصب نشده
 export function InstallPrompt() {
+    const blobName = useBlobName()
     const [open, setOpen] = useState(false)
     const [mode, setMode] = useState<"native" | "ios">("native")
     const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null)
@@ -111,7 +113,7 @@ export function InstallPrompt() {
             <DialogContent>
                 <DialogBody className="pt-6">
                     <div className="flex flex-col items-center text-center">
-                        <UserBlob name="کش لاگر" size={88} expression={happy} />
+                        <UserBlob name={blobName} size={88} expression={happy} />
                         <DialogTitle className="mt-4 text-[22px] font-bold">کش لاگر رو نصب کن</DialogTitle>
                         <p className="mt-1 text-[15px] text-muted-foreground">مثل یک برنامهٔ واقعی، از صفحهٔ اصلی گوشی.</p>
                     </div>

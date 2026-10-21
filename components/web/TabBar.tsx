@@ -62,14 +62,26 @@ export function TabBar() {
 
     return (
         <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 pb-[max(env(safe-area-inset-bottom),12px)]">
-            <div className="mx-auto flex max-w-md items-center gap-3 px-4">
+            <div className="mx-auto flex max-w-md items-center gap-2.5 px-4">
+                {/* دکمهٔ افزودن: دایرهٔ شیشه‌ای هم‌قد نوار، سمت راست */}
+                <button
+                    type="button"
+                    aria-label="تراکنش جدید"
+                    onClick={() => {
+                        haptic()
+                        openAdd()
+                    }}
+                    className="glass press-scale pointer-events-auto grid size-14 shrink-0 place-items-center rounded-full text-primary"
+                >
+                    <Plus className="size-6" strokeWidth={2.6} />
+                </button>
                 <div
                     ref={barRef}
                     onPointerDown={onPointerDown}
                     onPointerMove={onPointerMove}
                     onPointerUp={onPointerEnd}
                     onPointerCancel={onPointerEnd}
-                    className="glass pointer-events-auto relative grid h-16 flex-1 touch-none grid-cols-3 rounded-full p-1"
+                    className="glass pointer-events-auto relative grid h-14 flex-1 touch-none grid-cols-3 rounded-full p-1"
                 >
                     {shown >= 0 && (
                         <span
@@ -95,7 +107,7 @@ export function TabBar() {
                                 onClick={() => i !== active && haptic()}
                                 aria-current={i === active ? "page" : undefined}
                                 className={cn(
-                                    "relative flex flex-col items-center justify-center gap-0.5 rounded-full text-[11px] font-medium transition-colors duration-200",
+                                    "relative flex flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium transition-colors duration-200",
                                     on ? "text-primary" : "text-foreground/70"
                                 )}
                             >
@@ -106,17 +118,6 @@ export function TabBar() {
                     })}
                 </div>
 
-                <button
-                    type="button"
-                    aria-label="تراکنش جدید"
-                    onClick={() => {
-                        haptic()
-                        openAdd()
-                    }}
-                    className="press-scale pointer-events-auto grid size-16 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.25),var(--glass-shadow)]"
-                >
-                    <Plus className="size-7" strokeWidth={2.2} />
-                </button>
             </div>
         </nav>
     )

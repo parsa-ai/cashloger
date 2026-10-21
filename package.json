@@ -26,6 +26,7 @@
     "react-day-picker": "^9.13.2",
     "react-dom": "19.3.0",
     "recharts": "2.15.4",
+    "server-only": "^0.0.1",
     "tailwind-merge": "^3.5.0",
     "zustand": "^5.0.11"
   },

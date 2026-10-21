@@ -13,11 +13,14 @@ export function SegmentedControl<T extends string>({
     options,
     value,
     onChange,
+    size = "default",
     className,
 }: {
     options: Option<T>[]
     value: T
     onChange: (value: T) => void
+    // lg: بلندتر، برای شیت‌ها و جاهایی که کنترل اصلی صفحه است
+    size?: "default" | "lg"
     className?: string
 }) {
     const ref = useRef<HTMLDivElement>(null)
@@ -64,13 +67,18 @@ export function SegmentedControl<T extends string>({
                 drag.current = null
                 setDragging(false)
             }}
-            className={cn("relative grid h-9 touch-pan-y rounded-[10px] bg-segment p-0.5 text-[13px]", className)}
+            className={cn(
+                "relative grid touch-pan-y bg-segment p-0.5",
+                size === "lg" ? "h-11 rounded-xl text-[15px]" : "h-9 rounded-[10px] text-[13px]",
+                className
+            )}
             style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
         >
             <span
                 aria-hidden
                 className={cn(
-                    "absolute inset-y-0.5 right-0.5 rounded-lg bg-segment-thumb shadow-[0_1px_3px_oklch(0_0_0/0.14),0_0_0_0.5px_oklch(0_0_0/0.04)] transition-transform ease-ios dark:shadow-none",
+                    "absolute inset-y-0.5 right-0.5 bg-segment-thumb shadow-[0_1px_3px_oklch(0_0_0/0.14),0_0_0_0.5px_oklch(0_0_0/0.04)] transition-transform ease-ios dark:shadow-none",
+                    size === "lg" ? "rounded-[10px]" : "rounded-lg",
                     dragging ? "scale-[0.97] duration-200" : "duration-300"
                 )}
                 style={{
