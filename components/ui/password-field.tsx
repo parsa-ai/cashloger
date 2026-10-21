@@ -366,11 +366,6 @@ export function PasswordField({
           </button>
         </div>
 
-        {hint && (
-          <p className="mt-1.5 px-1 text-[12px] text-muted-foreground" aria-live="polite">
-            {shown ? "نگاه نمی‌کنم؛ رمزت روی صفحه پیداست." : "دارم تایپ کردنت رو نگاه می‌کنم."}
-          </p>
-        )}
       </div>
     </div>
   );

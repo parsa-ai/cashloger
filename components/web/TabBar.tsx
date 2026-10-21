@@ -59,6 +59,9 @@ export function TabBar() {
 
     const shown = dragIndex ?? active
 
+    // صفحه‌های داخلی (پروفایل، دسته‌ها) نوار تب ندارند و با دکمهٔ برگشت بالا بسته می‌شوند
+    if (active === -1) return null
+
     return (
         <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 pb-[max(env(safe-area-inset-bottom),12px)]">
             <div className="mx-auto flex max-w-md items-center gap-2.5 px-4">

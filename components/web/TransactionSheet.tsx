@@ -1,8 +1,9 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useLayoutEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { CalendarDays, PencilLine, Plus, Trash2 } from "lucide-react"
+import { Popover } from "radix-ui"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogNav } from "@/components/ui/dialog"
@@ -11,7 +12,7 @@ import { PersianCalendar } from "@/components/web/PersianCalendar"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { WheelPicker } from "@/components/web/WheelPicker"
 import { LogEntry, LogKind } from "@/lib/types"
-import { addDays, cn, defaultEntryDate, formatAmountWords, haptic, isSameDay } from "@/lib/utils"
+import { addDays, cn, defaultEntryDate, haptic, isSameDay } from "@/lib/utils"
 import { useLogStore } from "@/store/useChartStore"
 import { toast } from "@/store/useToastStore"
 import { useUiStore } from "@/store/useUiStore"
@@ -40,6 +41,78 @@ function shortDay(date: Date) {
     if (isSameDay(date, today)) return "امروز"
     if (isSameDay(date, addDays(today, -1))) return "دیروز"
     return date.toLocaleDateString("fa-IR", { weekday: "short", day: "numeric", month: "short" })
+}
+
+// ارقام فارسی و عربی را به انگلیسی برمی‌گرداند
+function toLatinDigits(text: string) {
+    return text.replace(/[۰-۹٠-٩]/g, (d) => String(d.charCodeAt(0) - (d >= "۰" ? 0x06f0 : 0x0660)))
+}
+
+// سه‌رقم‌سه‌رقم با ویرگول: 100,000
+function groupDigits(digits: string) {
+    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+}
+
+// فیلد مبلغ: ارقام فارسی هم پذیرفته و انگلیسی ذخیره می‌شوند؛ مکان‌نما بعد از ویرگول‌گذاری سر جایش می‌ماند
+function AmountInput({
+    digits,
+    onChange,
+    onSubmit,
+    className,
+}: {
+    digits: string
+    onChange: (digits: string) => void
+    onSubmit: () => void
+    className?: string
+}) {
+    const ref = useRef<HTMLInputElement>(null)
+    // تعداد رقم‌های قبل از مکان‌نما، برای برگرداندنش بعد از رندر
+    const caret = useRef<number | null>(null)
+    const text = groupDigits(digits)
+
+    useLayoutEffect(() => {
+        const el = ref.current
+        const count = caret.current
+        if (!el || count === null) return
+        caret.current = null
+        let pos = 0
+        for (let seen = 0; pos < el.value.length && seen < count; pos++) if (/\d/.test(el.value[pos])) seen++
+        el.setSelectionRange(pos, pos)
+    })
+
+    return (
+        <input
+            ref={ref}
+            type="text"
+            inputMode="numeric"
+            dir="ltr"
+            autoComplete="off"
+            value={text}
+            onChange={(e) => {
+                const raw = toLatinDigits(e.target.value)
+                const before = raw.slice(0, e.target.selectionStart ?? raw.length).replace(/\D/g, "").length
+                const next = raw.replace(/\D/g, "").replace(/^0+/, "").slice(0, MAX_DIGITS)
+                caret.current = Math.min(before - (raw.replace(/\D/g, "").length - next.length), next.length)
+                onChange(next)
+            }}
+            onKeyDown={(e) => {
+                if (e.key === "Enter") return onSubmit()
+                // پاک کردن روی ویرگول، رقم قبلش را پاک کند
+                const el = e.currentTarget
+                const pos = el.selectionStart ?? 0
+                if (e.key === "Backspace" && pos === el.selectionEnd && el.value[pos - 1] === ",") el.setSelectionRange(pos - 1, pos - 1)
+            }}
+            placeholder="0"
+            aria-label="مبلغ"
+            enterKeyHint="done"
+            style={{ width: `${Math.max(1, text.length) * 0.62 + 0.4}em` }}
+            className={cn(
+                "num max-w-full bg-transparent text-center leading-tight font-bold outline-none placeholder:text-muted-foreground/40",
+                text.length > 11 ? "text-[30px]" : "text-[40px]",
+                className
+            )}
+        />
+    )
 }
 
 function TransactionForm() {
@@ -119,8 +192,6 @@ function TransactionForm() {
         close()
     }
 
-    const words = formatAmountWords(amount)
-
     return (
         <>
             <DialogNav
@@ -148,30 +219,15 @@ function TransactionForm() {
                     ]}
                 />
 
-                {/* مبلغ: یک فیلد عددی ساده */}
-                <label className="flex flex-col items-center py-1">
-                    <span className="flex items-baseline gap-1.5">
-                        <input
-                            type="number"
-                            inputMode="numeric"
-                            min={0}
-                            dir="ltr"
-                            value={digits}
-                            onChange={(e) => setDigits(e.target.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, MAX_DIGITS))}
-                            onFocus={() => setCalendarOpen(false)}
-                            onKeyDown={(e) => e.key === "Enter" && submit()}
-                            placeholder="0"
-                            aria-label="مبلغ"
-                            enterKeyHint="done"
-                            style={{ width: `${Math.max(1, digits.length) + 0.5}ch` }}
-                            className={cn(
-                                "num max-w-[12ch] [appearance:textfield] bg-transparent text-center text-[40px] leading-tight font-bold outline-none placeholder:text-muted-foreground/40 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
-                                amount > 0 && !isCost && "text-success"
-                            )}
-                        />
-                        <span className="text-[15px] font-medium text-muted-foreground">تومان</span>
-                    </span>
-                    <span className="h-5 text-[13px] text-muted-foreground">{words && `${words} تومان`}</span>
+                {/* مبلغ: فیلد عددی ساده با جداکنندهٔ هزارگان */}
+                <label className="flex items-baseline justify-center gap-1.5 py-2">
+                    <AmountInput
+                        digits={digits}
+                        onChange={setDigits}
+                        onSubmit={submit}
+                        className={cn(amount > 0 && !isCost && "text-success")}
+                    />
+                    <span className="text-[15px] font-medium text-muted-foreground">تومان</span>
                 </label>
 
                 {/* دسته‌ها: چرخ انتخاب، پرکاربردها اول */}
@@ -203,21 +259,39 @@ function TransactionForm() {
 
                 {/* تاریخ و توضیح */}
                 <div className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={() => {
-                            haptic()
-                            setCalendarOpen((o) => !o)
-                        }}
-                        aria-expanded={calendarOpen}
-                        className={cn(
-                            "press flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-[14px] font-medium transition-colors duration-200",
-                            calendarOpen ? "bg-primary text-primary-foreground" : "bg-card"
-                        )}
-                    >
-                        <CalendarDays className="size-[18px]" />
-                        <span key={date.toDateString()} className="animate-fade-in">{shortDay(date)}</span>
-                    </button>
+                    {/* تقویم در یک پاپ‌اور شناور روی شیت باز می‌شود */}
+                    <Popover.Root open={calendarOpen} onOpenChange={setCalendarOpen}>
+                        <Popover.Trigger asChild>
+                        <button
+                            type="button"
+                            onClick={() => haptic()}
+                            className={cn(
+                                "press flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-[14px] font-medium transition-colors duration-200",
+                                calendarOpen ? "bg-primary text-primary-foreground" : "bg-card"
+                            )}
+                        >
+                            <CalendarDays className="size-[18px]" />
+                            <span key={date.toDateString()} className="animate-fade-in">{shortDay(date)}</span>
+                        </button>
+                        </Popover.Trigger>
+                        <Popover.Portal>
+                            <Popover.Content
+                                side="top"
+                                align="start"
+                                sideOffset={8}
+                                collisionPadding={16}
+                                className="z-[60] w-[min(340px,calc(100vw-32px))] origin-(--radix-popover-content-transform-origin) overflow-hidden rounded-2xl shadow-float outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+                            >
+                                <PersianCalendar
+                                    value={date}
+                                    onChange={(d) => {
+                                        setDate(d)
+                                        setCalendarOpen(false)
+                                    }}
+                                />
+                            </Popover.Content>
+                        </Popover.Portal>
+                    </Popover.Root>
                     <label className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full bg-card px-4">
                         <PencilLine className="size-4 shrink-0 text-muted-foreground" />
                         <input
@@ -232,16 +306,6 @@ function TransactionForm() {
                         />
                     </label>
                 </div>
-
-                {calendarOpen && (
-                    <PersianCalendar
-                        value={date}
-                        onChange={(d) => {
-                            setDate(d)
-                            setCalendarOpen(false)
-                        }}
-                    />
-                )}
 
                 <Button size="lg" className="w-full" disabled={amount <= 0} onClick={submit}>
                     {entry ? "ذخیره تغییرات" : `ثبت ${noun}`}

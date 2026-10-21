@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { sleepy } from "blobatar/expression"
 
@@ -12,6 +12,12 @@ import { TABS } from "@/lib/nav"
 import { cn, formatMonthTitle, haptic, isSamePersianMonth, shiftPersianMonth } from "@/lib/utils"
 import { useLogStore } from "@/store/useChartStore"
 import useDateStore from "@/store/useYearStore"
+
+// صفحهٔ بالادستی هر صفحهٔ داخلی، وقتی تاریخچه‌ای برای برگشت نیست
+const PARENTS: Record<string, string> = {
+    "/user": "/",
+    "/categories": "/user",
+}
 
 const TITLES: Record<string, string> = {
     "/user": "پروفایل",
@@ -34,7 +40,7 @@ function useSending() {
 
 // تراشهٔ پروفایل (هم‌شکل تراشهٔ دسته‌ها): وضعیت همگام‌سازی را هم خود بلاب نشان می‌دهد؛
 // آفلاین چشم‌هایش را می‌بندد و تعداد ارسال‌نشده‌ها کنارش می‌آید، در حال ارسال حلقه‌ای دورش می‌چرخد
-function ProfileChip({ active }: { active: boolean }) {
+function ProfileChip() {
     const blobName = useBlobName()
     const isOnline = useLogStore((s) => s.isOnline)
     const pending = useLogStore((s) => s.queue.length)
@@ -53,15 +59,11 @@ function ProfileChip({ active }: { active: boolean }) {
         <Link
             href="/user"
             aria-label={`پروفایل (${status})`}
-            aria-current={active ? "page" : undefined}
             onClick={() => {
                 haptic()
                 if (pending > 0) void sync()
             }}
-            className={cn(
-                "glass press pointer-events-auto flex h-11 items-center gap-2 justify-self-start rounded-full ps-1 pe-3.5 text-[14px] font-semibold",
-                active && "text-primary"
-            )}
+            className="glass press pointer-events-auto flex h-11 items-center gap-2 justify-self-start rounded-full ps-1 pe-3.5 text-[14px] font-semibold"
         >
             <span className="relative grid size-9 shrink-0 place-items-center">
                 <UserBlob name={blobName} size={sending ? 30 : 36} expression={isOnline ? undefined : sleepy} className="transition-[width,height] duration-300" />
@@ -128,11 +130,39 @@ function MonthPicker() {
     )
 }
 
-// هدر شناور شیشه‌ای: پروفایل (یا برگشت)، عنوان صفحه، انتخاب ماه در تب‌ها
+// دکمهٔ برگشت صفحه‌های داخلی: اگر از داخل برنامه آمده‌ایم همان‌جا برمی‌گردد، وگرنه به صفحهٔ بالادستی
+// آیا داخل همین برنامه جابه‌جا شده‌ایم (پس router.back از برنامه بیرون نمی‌رود)
+let entryPath: string | null = null
+let navigated = false
+
+function BackButton({ pathname }: { pathname: string }) {
+    const router = useRouter()
+    return (
+        <button
+            type="button"
+            aria-label="بازگشت"
+            onClick={() => {
+                haptic()
+                if (navigated) router.back()
+                else router.push(PARENTS[pathname] ?? "/")
+            }}
+            className="glass press pointer-events-auto grid size-11 place-items-center justify-self-start rounded-full text-primary"
+        >
+            <ChevronRight className="size-6" />
+        </button>
+    )
+}
+
+// هدر شناور شیشه‌ای: پروفایل یا برگشت، عنوان صفحه، انتخاب ماه در تب‌ها
 export function AppHeader() {
     const pathname = usePathname()
     const isTab = (TABS as readonly string[]).includes(pathname)
     const title = TITLES[pathname]
+
+    useEffect(() => {
+        if (entryPath === null) entryPath = pathname
+        else if (pathname !== entryPath) navigated = true
+    }, [pathname])
 
     return (
         <>
@@ -143,17 +173,7 @@ export function AppHeader() {
             />
             <header className="pointer-events-none fixed inset-x-0 top-0 z-40 pt-[calc(env(safe-area-inset-top)+8px)]">
                 <div className="mx-auto grid max-w-2xl grid-cols-[1fr_auto_1fr] items-center gap-3 px-4">
-                    {pathname === "/categories" ? (
-                        <Link
-                            href="/user"
-                            aria-label="بازگشت به پروفایل"
-                            className="glass press pointer-events-auto grid size-11 place-items-center justify-self-start rounded-full text-primary"
-                        >
-                            <ChevronRight className="size-6" />
-                        </Link>
-                    ) : (
-                        <ProfileChip active={pathname === "/user"} />
-                    )}
+                    {isTab ? <ProfileChip /> : <BackButton pathname={pathname} />}
 
                     {title ? (
                         <div className="glass pointer-events-auto flex h-11 min-w-0 items-center justify-center rounded-full px-5">

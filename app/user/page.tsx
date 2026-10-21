@@ -267,7 +267,6 @@ export default function UserPage() {
 
       <Group
         title="حساب"
-        footer={username ? undefined : 'یک نام کاربری انتخاب کن تا با اون هم بتونی وارد بشی.'}
       >
         <Row
           onClick={() => setUsernameOpen(true)}

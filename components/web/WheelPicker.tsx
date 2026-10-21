@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef } from "react"
 import { cn, haptic } from "@/lib/utils"
 
-const ROW = 40
+const ROW = 34
 // تعداد ردیف‌های دیده‌شده؛ فرد تا یکی دقیقاً وسط باشد
 const VISIBLE = 5
 const PAD = ((VISIBLE - 1) / 2) * ROW
@@ -53,7 +53,7 @@ export function WheelPicker<T>({
         for (let i = first; i <= last; i++) {
             const row = list.children[i] as HTMLElement
             const d = Math.max(-3, Math.min(3, i - center))
-            row.style.transform = `perspective(360px) rotateX(${-d * 22}deg) scale(${1 - Math.abs(d) * 0.05})`
+            row.style.transform = `perspective(300px) rotateX(${-d * 24}deg) scale(${1 - Math.abs(d) * 0.05})`
             row.style.opacity = String(Math.max(0, 1 - Math.abs(d) * 0.32))
             row.setAttribute("aria-selected", String(Math.round(center) === i))
         }
@@ -130,7 +130,7 @@ export function WheelPicker<T>({
     return (
         <div className={cn("relative", className)} style={{ height: VISIBLE * ROW }}>
             {/* نوار انتخاب وسط */}
-            <div aria-hidden className="pointer-events-none absolute inset-x-0 rounded-xl bg-card" style={{ top: PAD, height: ROW }} />
+            <div aria-hidden className="pointer-events-none absolute inset-x-0 rounded-lg bg-card" style={{ top: PAD, height: ROW }} />
             <div
                 ref={scrollRef}
                 role="listbox"
@@ -155,7 +155,7 @@ export function WheelPicker<T>({
                                 haptic()
                                 scrollToRow(i)
                             }}
-                            className="flex snap-center items-center justify-center gap-2.5 text-[17px] will-change-transform select-none"
+                            className="flex snap-center items-center justify-center gap-2 text-[15px] will-change-transform select-none"
                             style={{ height: ROW }}
                         >
                             {render(item, getKey(item) === value)}

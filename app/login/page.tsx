@@ -264,7 +264,7 @@ export default function LoginPage() {
                     ? 'این نام کاربری گرفته شده'
                     : availability === 'invalid'
                       ? '۳ تا ۲۰ حرف: a-z، عدد یا _'
-                      : 'با همین نام کاربری هم می‌تونی وارد بشی.'}
+                      : ''}
                 </p>
               )}
             </div>
