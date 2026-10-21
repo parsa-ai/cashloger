@@ -3,18 +3,18 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ChevronRight, CloudCheck, CloudOff, Loader2 } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { sleepy } from "blobatar/expression"
 
 import { UserBlob } from "@/components/web/Avatars"
 import { useBlobName } from "@/components/web/ProfileProvider"
-import { cn, haptic } from "@/lib/utils"
+import { TABS } from "@/lib/nav"
+import { cn, formatMonthTitle, haptic, isSamePersianMonth, shiftPersianMonth } from "@/lib/utils"
 import { useLogStore } from "@/store/useChartStore"
+import useDateStore from "@/store/useYearStore"
 
 const TITLES: Record<string, string> = {
-    "/": "کش لاگر",
-    "/logs": "تراکنش‌ها",
-    "/user": "تنظیمات",
+    "/user": "پروفایل",
     "/categories": "دسته‌بندی‌ها",
 }
 
@@ -32,52 +32,107 @@ function useSending() {
     return isOnline && pending > 0 && slow
 }
 
-// وضعیت اتصال بالا سمت چپ: آنلاین یک دایره، آفلاین یا در حال ارسال یک کپسول با متن
-function SyncPill() {
+// تراشهٔ پروفایل (هم‌شکل تراشهٔ دسته‌ها): وضعیت همگام‌سازی را هم خود بلاب نشان می‌دهد؛
+// آفلاین چشم‌هایش را می‌بندد و تعداد ارسال‌نشده‌ها کنارش می‌آید، در حال ارسال حلقه‌ای دورش می‌چرخد
+function ProfileChip({ active }: { active: boolean }) {
+    const blobName = useBlobName()
     const isOnline = useLogStore((s) => s.isOnline)
     const pending = useLogStore((s) => s.queue.length)
     const sync = useLogStore((s) => s.sync)
     const sending = useSending()
 
-    const label = !isOnline
+    const status = !isOnline
         ? pending > 0
-            ? `آفلاین · ${pending.toLocaleString("fa-IR")}`
+            ? `آفلاین، ${pending.toLocaleString("fa-IR")} تراکنش ارسال نشده`
             : "آفلاین"
         : sending
-          ? "ارسال…"
-          : null
+          ? "در حال ارسال"
+          : "همگام است"
 
     return (
-        <button
-            type="button"
+        <Link
+            href="/user"
+            aria-label={`پروفایل (${status})`}
+            aria-current={active ? "page" : undefined}
             onClick={() => {
                 haptic()
-                sync()
+                if (pending > 0) void sync()
             }}
-            aria-label={label ?? "همگام است"}
             className={cn(
-                "glass press pointer-events-auto flex h-11 min-w-11 items-center justify-center gap-1.5 justify-self-end rounded-full",
-                label ? "px-3.5" : "px-0",
-                isOnline ? "text-primary" : "text-amber-600 dark:text-amber-400"
+                "glass press pointer-events-auto flex h-11 items-center gap-2 justify-self-start rounded-full ps-1 pe-3.5 text-[14px] font-semibold",
+                active && "text-primary"
             )}
         >
-            {sending ? (
-                <Loader2 className="size-[18px] animate-spin" />
-            ) : isOnline ? (
-                <CloudCheck className="size-5" />
-            ) : (
-                <CloudOff className="size-[18px]" />
-            )}
-            {label && <span className="animate-fade-in text-[13px] font-semibold whitespace-nowrap">{label}</span>}
-        </button>
+            <span className="relative grid size-9 shrink-0 place-items-center">
+                <UserBlob name={blobName} size={sending ? 30 : 36} expression={isOnline ? undefined : sleepy} className="transition-[width,height] duration-300" />
+                {sending && (
+                    <span aria-hidden className="absolute inset-0 animate-spin rounded-full border-2 border-primary/25 border-t-primary" />
+                )}
+                {!isOnline && (
+                    <span
+                        aria-hidden
+                        className="num absolute -end-1 -top-1 grid h-[18px] min-w-[18px] animate-fade-in place-items-center rounded-full bg-amber-500 px-1 text-[11px] font-bold text-white ring-2 ring-background"
+                    >
+                        {pending > 0 ? pending.toLocaleString("fa-IR") : "!"}
+                    </span>
+                )}
+            </span>
+            پروفایل
+        </Link>
     )
 }
 
-// هدر شناور شیشه‌ای: بلاب (یا برگشت)، عنوان کپسولی، وضعیت اتصال
+// انتخاب ماه شمسی در هدر: ‹ مهر ۱۴۰۵ ›؛ لمس اسم ماه به ماه جاری برمی‌گردد
+function MonthPicker() {
+    const date = useDateStore((s) => s.date) || new Date()
+    const setDate = useDateStore((s) => s.setDate)
+    const isCurrent = isSamePersianMonth(date, new Date())
+
+    const go = (months: number) => {
+        haptic()
+        setDate(shiftPersianMonth(date, months))
+    }
+
+    return (
+        <div className="glass pointer-events-auto flex h-11 items-center justify-self-end rounded-full px-1">
+            <button type="button" onClick={() => go(-1)} aria-label="ماه قبل" className="press grid size-9 place-items-center text-primary">
+                <ChevronRight className="size-5" />
+            </button>
+            <button
+                type="button"
+                disabled={isCurrent}
+                onClick={() => {
+                    haptic()
+                    setDate(new Date())
+                }}
+                aria-label={isCurrent ? undefined : "برگشت به این ماه"}
+                className={cn(
+                    "press h-8 min-w-[72px] rounded-full px-2 text-[14px] font-semibold whitespace-nowrap transition-colors duration-200",
+                    !isCurrent && "bg-tint text-primary"
+                )}
+            >
+                <span key={date.toDateString()} className="inline-block animate-fade-in">
+                    {formatMonthTitle(date)}
+                </span>
+            </button>
+            <button
+                type="button"
+                onClick={() => go(1)}
+                disabled={isCurrent}
+                aria-label="ماه بعد"
+                className="press grid size-9 place-items-center text-primary transition-opacity disabled:opacity-25"
+            >
+                <ChevronLeft className="size-5" />
+            </button>
+        </div>
+    )
+}
+
+// هدر شناور شیشه‌ای: پروفایل (یا برگشت)، عنوان صفحه، انتخاب ماه در تب‌ها
 export function AppHeader() {
     const pathname = usePathname()
-    const blobName = useBlobName()
-    const isOnline = useLogStore((s) => s.isOnline)
+    const isTab = (TABS as readonly string[]).includes(pathname)
+    const title = TITLES[pathname]
 
     return (
         <>
@@ -91,29 +146,26 @@ export function AppHeader() {
                     {pathname === "/categories" ? (
                         <Link
                             href="/user"
-                            aria-label="بازگشت به تنظیمات"
+                            aria-label="بازگشت به پروفایل"
                             className="glass press pointer-events-auto grid size-11 place-items-center justify-self-start rounded-full text-primary"
                         >
                             <ChevronRight className="size-6" />
                         </Link>
                     ) : (
-                        <Link
-                            href="/user"
-                            aria-label="تنظیمات"
-                            className="glass press pointer-events-auto grid size-11 place-items-center justify-self-start rounded-full"
-                        >
-                            {/* آفلاین که باشی بلاب چشم‌هایش را می‌بندد */}
-                            <UserBlob name={blobName} size={36} expression={isOnline ? undefined : sleepy} />
-                        </Link>
+                        <ProfileChip active={pathname === "/user"} />
                     )}
 
-                    <div className="glass pointer-events-auto flex h-11 min-w-0 items-center justify-center rounded-full px-5">
-                        <h1 key={pathname} className="animate-fade-in truncate text-[16px] font-bold">
-                            {TITLES[pathname] ?? "کش لاگر"}
-                        </h1>
-                    </div>
+                    {title ? (
+                        <div className="glass pointer-events-auto flex h-11 min-w-0 items-center justify-center rounded-full px-5">
+                            <h1 key={pathname} className="animate-fade-in truncate text-[16px] font-bold">
+                                {title}
+                            </h1>
+                        </div>
+                    ) : (
+                        <h1 className="sr-only">کش لاگر</h1>
+                    )}
 
-                    <SyncPill />
+                    {isTab ? <MonthPicker /> : <span />}
                 </div>
             </header>
         </>

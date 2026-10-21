@@ -1,14 +1,15 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
-import { CalendarDays, Delete, PencilLine, Plus, Trash2 } from "lucide-react"
+import { CalendarDays, PencilLine, Plus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogNav } from "@/components/ui/dialog"
 import { CategoryAvatar } from "@/components/web/Avatars"
 import { PersianCalendar } from "@/components/web/PersianCalendar"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
+import { WheelPicker } from "@/components/web/WheelPicker"
 import { LogEntry, LogKind } from "@/lib/types"
 import { addDays, cn, defaultEntryDate, formatAmountWords, haptic, isSameDay } from "@/lib/utils"
 import { useLogStore } from "@/store/useChartStore"
@@ -17,7 +18,7 @@ import { useUiStore } from "@/store/useUiStore"
 import useDateStore from "@/store/useYearStore"
 
 const MAX_DIGITS = 12
-const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "000", "0", "back"] as const
+const NONE = ""
 
 // شیت سراسری ثبت و ویرایش تراکنش (دکمهٔ + در نوار تب بازش می‌کند)
 export function TransactionSheetHost() {
@@ -41,39 +42,6 @@ function shortDay(date: Date) {
     return date.toLocaleDateString("fa-IR", { weekday: "short", day: "numeric", month: "short" })
 }
 
-function Keypad({ onKey }: { onKey: (key: (typeof KEYS)[number] | "clear") => void }) {
-    const holdTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
-
-    return (
-        <div dir="ltr" className="grid grid-cols-3 gap-2">
-            {KEYS.map((key) => (
-                <button
-                    key={key}
-                    type="button"
-                    aria-label={key === "back" ? "پاک کردن" : undefined}
-                    onClick={() => onKey(key)}
-                    // نگه داشتن دکمهٔ پاک کردن، کل مبلغ را پاک می‌کند
-                    onPointerDown={() => {
-                        if (key !== "back") return
-                        holdTimer.current = setTimeout(() => {
-                            holdTimer.current = undefined
-                            onKey("clear")
-                        }, 500)
-                    }}
-                    onPointerUp={() => clearTimeout(holdTimer.current)}
-                    onPointerLeave={() => clearTimeout(holdTimer.current)}
-                    className={cn(
-                        "num grid h-[52px] place-items-center rounded-xl text-[24px] font-medium transition-colors duration-200 active:bg-fill-strong active:duration-0",
-                        key === "back" ? "text-foreground/70" : "bg-card"
-                    )}
-                >
-                    {key === "back" ? <Delete className="size-6" /> : Number(key).toLocaleString("fa-IR", { minimumIntegerDigits: key.length })}
-                </button>
-            ))}
-        </div>
-    )
-}
-
 function TransactionForm() {
     const entry = useUiStore((s) => s.editing) ?? undefined
     const addKind = useUiStore((s) => s.addKind)
@@ -91,7 +59,7 @@ function TransactionForm() {
     const [selected, setSelected] = useState<string | null>(entry ? entry.key : null)
     const [date, setDate] = useState(() => entry?.date ?? defaultEntryDate(viewDate))
     const [description, setDescription] = useState(entry?.description ?? "")
-    const [panel, setPanel] = useState<"keypad" | "date">("keypad")
+    const [calendarOpen, setCalendarOpen] = useState(false)
 
     const amount = digits ? Number(digits) : 0
     const isCost = kind === "cost"
@@ -110,18 +78,13 @@ function TransactionForm() {
 
     const category = selected && items.some((c) => c.id === selected) ? selected : entry && kind === (entry.mode === "increase" ? "income" : "cost") ? null : items[0]?.id ?? null
 
+    // تراکنش بی‌دسته‌ای که ویرایش می‌شود، روی چرخ گزینهٔ «بدون دسته» هم دارد
+    const wheelItems = useMemo(
+        () => (entry && !entry.key ? [{ id: NONE, label: "بدون دسته", color: undefined }, ...items] : items),
+        [entry, items]
+    )
 
     const close = () => setOpen(false)
-
-    const pressKey = (key: (typeof KEYS)[number] | "clear") => {
-        haptic(5)
-        setDigits((d) => {
-            if (key === "clear") return ""
-            if (key === "back") return d.slice(0, -1)
-            if (!d && (key === "0" || key === "000")) return d
-            return (d + key).slice(0, MAX_DIGITS)
-        })
-    }
 
     const submit = () => {
         if (amount <= 0) {
@@ -156,27 +119,6 @@ function TransactionForm() {
         close()
     }
 
-    // کیبورد فیزیکی (دسکتاپ): عدد، پاک کردن و Enter
-    const submitRef = useRef(submit)
-    const keyRef = useRef(pressKey)
-    useEffect(() => {
-        submitRef.current = submit
-        keyRef.current = pressKey
-    })
-    useEffect(() => {
-        const onKeyDown = (e: KeyboardEvent) => {
-            if ((e.target as HTMLElement).closest("input, textarea")) return
-            const digit = e.key.replace(/[۰-۹]/, (d) => String(d.charCodeAt(0) - 0x06f0))
-            if (/^\d$/.test(digit)) keyRef.current(digit as (typeof KEYS)[number])
-            else if (e.key === "Backspace") keyRef.current("back")
-            else if (e.key === "Enter") submitRef.current()
-            else return
-            e.preventDefault()
-        }
-        window.addEventListener("keydown", onKeyDown)
-        return () => window.removeEventListener("keydown", onKeyDown)
-    }, [])
-
     const words = formatAmountWords(amount)
 
     return (
@@ -206,52 +148,57 @@ function TransactionForm() {
                     ]}
                 />
 
-                {/* مبلغ؛ لمسش صفحه‌کلید اعداد را برمی‌گرداند */}
-                <button type="button" onClick={() => setPanel("keypad")} className="flex flex-col items-center py-1">
-                    <span
-                        className={cn(
-                            "num flex items-baseline gap-1.5 text-[40px] leading-tight font-bold",
-                            !amount && "text-muted-foreground/40",
-                            amount > 0 && !isCost && "text-success"
-                        )}
-                    >
-                        {amount ? amount.toLocaleString("fa-IR") : "۰"}
+                {/* مبلغ: یک فیلد عددی ساده */}
+                <label className="flex flex-col items-center py-1">
+                    <span className="flex items-baseline gap-1.5">
+                        <input
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            dir="ltr"
+                            value={digits}
+                            onChange={(e) => setDigits(e.target.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, MAX_DIGITS))}
+                            onFocus={() => setCalendarOpen(false)}
+                            onKeyDown={(e) => e.key === "Enter" && submit()}
+                            placeholder="0"
+                            aria-label="مبلغ"
+                            enterKeyHint="done"
+                            style={{ width: `${Math.max(1, digits.length) + 0.5}ch` }}
+                            className={cn(
+                                "num max-w-[12ch] [appearance:textfield] bg-transparent text-center text-[40px] leading-tight font-bold outline-none placeholder:text-muted-foreground/40 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+                                amount > 0 && !isCost && "text-success"
+                            )}
+                        />
                         <span className="text-[15px] font-medium text-muted-foreground">تومان</span>
                     </span>
                     <span className="h-5 text-[13px] text-muted-foreground">{words && `${words} تومان`}</span>
-                </button>
+                </label>
 
-                {/* دسته‌ها: تراشه با اسم کامل، پرکاربردها اول */}
-                <div className="no-scrollbar -mx-1 flex max-h-[136px] flex-wrap gap-2 overflow-y-auto px-1 py-0.5">
-                    {items.map((item) => {
-                        const active = item.id === category
-                        return (
-                            <button
-                                key={item.id}
-                                type="button"
-                                aria-pressed={active}
-                                onClick={() => {
-                                    if (!active) haptic()
-                                    setSelected(item.id)
-                                }}
-                                className={cn(
-                                    "press flex h-10 items-center gap-2 rounded-full ps-1 pe-3.5 text-[14px] transition-[background-color,color,box-shadow] duration-200",
-                                    active ? "bg-tint font-semibold text-primary ring-[1.5px] ring-primary" : "bg-card"
-                                )}
-                            >
-                                <CategoryAvatar label={item.label} color={item.color} size={32} />
-                                {item.label}
-                            </button>
-                        )
-                    })}
-                    <Link
-                        href="/categories"
-                        onClick={close}
-                        className="press flex h-10 items-center gap-1.5 rounded-full border border-dashed border-primary/40 px-3.5 text-[14px] text-primary"
-                    >
-                        <Plus className="size-4" />
-                        دسته جدید
-                    </Link>
+                {/* دسته‌ها: چرخ انتخاب، پرکاربردها اول */}
+                <div className="space-y-1">
+                    <div className="flex items-center justify-between px-1">
+                        <span className="text-[13px] text-muted-foreground">دسته</span>
+                        <Link href="/categories" onClick={close} className="press flex items-center gap-1 text-[13px] font-medium text-primary">
+                            <Plus className="size-3.5" />
+                            دسته جدید
+                        </Link>
+                    </div>
+                    {wheelItems.length > 0 && (
+                        <WheelPicker
+                            key={kind}
+                            label="دسته"
+                            items={wheelItems}
+                            value={category ?? NONE}
+                            getKey={(c) => c.id}
+                            onChange={(id) => setSelected(id === NONE ? null : id)}
+                            render={(c, active) => (
+                                <>
+                                    <CategoryAvatar label={c.label} color={c.color} size={28} />
+                                    <span className={cn("truncate", active && "font-semibold")}>{c.label}</span>
+                                </>
+                            )}
+                        />
+                    )}
                 </div>
 
                 {/* تاریخ و توضیح */}
@@ -260,12 +207,12 @@ function TransactionForm() {
                         type="button"
                         onClick={() => {
                             haptic()
-                            setPanel((p) => (p === "date" ? "keypad" : "date"))
+                            setCalendarOpen((o) => !o)
                         }}
-                        aria-expanded={panel === "date"}
+                        aria-expanded={calendarOpen}
                         className={cn(
                             "press flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-[14px] font-medium transition-colors duration-200",
-                            panel === "date" ? "bg-primary text-primary-foreground" : "bg-card"
+                            calendarOpen ? "bg-primary text-primary-foreground" : "bg-card"
                         )}
                     >
                         <CalendarDays className="size-[18px]" />
@@ -276,7 +223,7 @@ function TransactionForm() {
                         <input
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            onFocus={() => setPanel("keypad")}
+                            onFocus={() => setCalendarOpen(false)}
                             onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
                             placeholder="توضیح (اختیاری)"
                             maxLength={500}
@@ -286,17 +233,14 @@ function TransactionForm() {
                     </label>
                 </div>
 
-                {/* صفحه‌کلید اعداد یا تقویم، جای هم */}
-                {panel === "date" ? (
+                {calendarOpen && (
                     <PersianCalendar
                         value={date}
                         onChange={(d) => {
                             setDate(d)
-                            setPanel("keypad")
+                            setCalendarOpen(false)
                         }}
                     />
-                ) : (
-                    <Keypad onKey={pressKey} />
                 )}
 
                 <Button size="lg" className="w-full" disabled={amount <= 0} onClick={submit}>

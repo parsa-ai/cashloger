@@ -3,7 +3,7 @@
 import { useRef, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { ChartPie, Plus, ReceiptText, Settings } from "lucide-react"
+import { ChartPie, Plus, ReceiptText } from "lucide-react"
 
 import { TABS, tabIndex } from "@/lib/nav"
 import { cn, haptic } from "@/lib/utils"
@@ -12,7 +12,6 @@ import { useUiStore } from "@/store/useUiStore"
 const ITEMS = [
     { label: "خلاصه", icon: ChartPie },
     { label: "تراکنش‌ها", icon: ReceiptText },
-    { label: "تنظیمات", icon: Settings },
 ]
 
 // نوار تب شناور شیشه‌ای؛ نشانگر را می‌شود با انگشت روی تب دیگر کشید
@@ -81,7 +80,8 @@ export function TabBar() {
                     onPointerMove={onPointerMove}
                     onPointerUp={onPointerEnd}
                     onPointerCancel={onPointerEnd}
-                    className="glass pointer-events-auto relative grid h-14 flex-1 touch-none grid-cols-3 rounded-full p-1"
+                    className="glass pointer-events-auto relative grid h-14 flex-1 touch-none rounded-full p-1"
+                    style={{ gridTemplateColumns: `repeat(${TABS.length}, minmax(0, 1fr))` }}
                 >
                     {shown >= 0 && (
                         <span

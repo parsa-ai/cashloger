@@ -7,7 +7,6 @@ import { ArrowDown, ArrowUp, Plus } from "lucide-react"
 import { AnimatedNumber } from "@/components/web/AnimatedNumber"
 import { buildChartItems, SpendingChart } from "@/components/web/Chart"
 import { Group } from "@/components/web/Group"
-import { MonthBar } from "@/components/web/MonthBar"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { TransactionRow } from "@/components/web/TransactionRow"
 import { LogKind } from "@/lib/types"
@@ -75,7 +74,6 @@ function SummaryCard({ income, costs }: { income: number; costs: number }) {
 function HomeSkeleton() {
     return (
         <div className="space-y-6">
-            <div className="h-10 w-48 animate-pulse rounded-full bg-card" />
             <div className="h-36 animate-pulse rounded-xl bg-card" />
             <div className="h-9 animate-pulse rounded-lg bg-fill" />
             <div className="h-80 animate-pulse rounded-xl bg-card" />
@@ -116,7 +114,6 @@ export function HomeView() {
 
     return (
         <div className="space-y-4">
-            <MonthBar />
             <SummaryCard income={income} costs={costs} />
 
             <section className="space-y-3 pt-2">

@@ -7,7 +7,6 @@ import { sad, surprised } from "blobatar/expression"
 import { ExportButton } from "@/components/web/ExportSheet"
 import { EmptyState } from "@/components/web/EmptyState"
 import { Group } from "@/components/web/Group"
-import { MonthBar } from "@/components/web/MonthBar"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { TransactionRow } from "@/components/web/TransactionRow"
 import { LogEntry } from "@/lib/types"
@@ -53,23 +52,25 @@ export function TransactionList() {
 
     return (
         <div className="space-y-4">
-            <MonthBar trailing={<ExportButton />} />
-            <label className="flex h-10 items-center gap-2 rounded-full bg-card px-3.5">
-                <Search className="size-4 shrink-0 text-muted-foreground" />
-                <input
-                    type="search"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="جستجو در دسته، توضیح یا مبلغ"
-                    enterKeyHint="search"
-                    className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground/70 [&::-webkit-search-cancel-button]:hidden"
-                />
-                {query && (
-                    <button type="button" onClick={() => setQuery("")} aria-label="پاک کردن جستجو" className="press grid size-6 place-items-center rounded-full bg-fill-strong">
-                        <X className="size-3.5" />
-                    </button>
-                )}
-            </label>
+            <div className="flex items-center gap-2">
+                <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-full bg-card px-3.5">
+                    <Search className="size-4 shrink-0 text-muted-foreground" />
+                    <input
+                        type="search"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="جستجو در دسته، توضیح یا مبلغ"
+                        enterKeyHint="search"
+                        className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground/70 [&::-webkit-search-cancel-button]:hidden"
+                    />
+                    {query && (
+                        <button type="button" onClick={() => setQuery("")} aria-label="پاک کردن جستجو" className="press grid size-6 place-items-center rounded-full bg-fill-strong">
+                            <X className="size-3.5" />
+                        </button>
+                    )}
+                </label>
+                <ExportButton />
+            </div>
             <div>
                 <SegmentedControl
                     value={filter}

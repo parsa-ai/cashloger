@@ -8,7 +8,7 @@ interface Option<T extends string> {
     label: React.ReactNode
 }
 
-// سگمنت کنترل به سبک iOS: لمس یا کشیدن انگشت روی گزینه‌ها (برای چیدمان راست‌به‌چپ)
+// سگمنت کنترل شیشه‌ای هم‌شکل نوار تب پایین: لمس یا کشیدن انگشت روی گزینه‌ها (برای چیدمان راست‌به‌چپ)
 export function SegmentedControl<T extends string>({
     options,
     value,
@@ -68,8 +68,8 @@ export function SegmentedControl<T extends string>({
                 setDragging(false)
             }}
             className={cn(
-                "relative grid touch-pan-y bg-segment p-0.5",
-                size === "lg" ? "h-11 rounded-xl text-[15px]" : "h-9 rounded-[10px] text-[13px]",
+                "glass relative grid touch-pan-y rounded-full p-1",
+                size === "lg" ? "h-12 text-[15px]" : "h-11 text-[14px]",
                 className
             )}
             style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
@@ -77,13 +77,12 @@ export function SegmentedControl<T extends string>({
             <span
                 aria-hidden
                 className={cn(
-                    "absolute inset-y-0.5 right-0.5 bg-segment-thumb shadow-[0_1px_3px_oklch(0_0_0/0.14),0_0_0_0.5px_oklch(0_0_0/0.04)] transition-transform ease-ios dark:shadow-none",
-                    size === "lg" ? "rounded-[10px]" : "rounded-lg",
-                    dragging ? "scale-[0.97] duration-200" : "duration-300"
+                    "absolute inset-y-1 right-1 rounded-full bg-fill-strong transition-transform ease-ios",
+                    dragging ? "duration-200" : "duration-[400ms]"
                 )}
                 style={{
-                    width: `calc((100% - 4px) / ${options.length})`,
-                    transform: `translateX(${-index * 100}%)`,
+                    width: `calc((100% - 8px) / ${options.length})`,
+                    transform: `translateX(${-index * 100}%) scale(${dragging ? 1.06 : 1})`,
                 }}
             />
             {options.map((option, i) => {
@@ -96,8 +95,8 @@ export function SegmentedControl<T extends string>({
                         aria-selected={selected}
                         onClick={() => select(i)}
                         className={cn(
-                            "relative truncate px-2 transition-colors duration-200",
-                            selected ? "font-semibold text-foreground" : "font-medium text-foreground/60"
+                            "relative truncate rounded-full px-2 transition-colors duration-200",
+                            selected ? "font-semibold text-primary" : "font-medium text-foreground/70"
                         )}
                     >
                         {option.label}
