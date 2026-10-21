@@ -1,157 +1,112 @@
-const APP_SHELL_CACHE = "app-shell-cache-v1";
-const APP_SHELL_FILES = [
-    "/",
-    "/logs",
-    "/favicon.ico",
+// سرویس‌ورکر کش لاگر: صفحات و فایل‌های برنامه را کش می‌کند تا بدون اینترنت هم باز شود.
+// داده‌ها جدا از این فایل، در حافظهٔ دستگاه و صف همگام‌سازی نگه داشته می‌شوند.
+
+const VERSION = "v2";
+const SHELL_CACHE = `shell-${VERSION}`;
+const STATIC_CACHE = `static-${VERSION}`;
+const PAGES_CACHE = `pages-${VERSION}`;
+
+const SHELL_FILES = [
     "/offline.html",
+    "/manifest.webmanifest",
+    "/favicon.ico",
     "/web-app-manifest-192x192.png",
     "/web-app-manifest-512x512.png",
 ];
-const STATIC_CACHE = "static-cache-v1";
-const DYNAMIC_CACHE = "dynamic-cache-v1";
 
 self.addEventListener("install", (event) => {
-    console.log("Service Worker installing...");
-
     event.waitUntil(
         caches
-            .open(APP_SHELL_CACHE)
-            .then((cache) => {
-                return cache.addAll(APP_SHELL_FILES);
-            })
-            .then(() => {
-                return self.skipWaiting();
-            })
-            .catch((error) => {
-                console.error("Failed to cache app shell:", error);
-            })
+            .open(SHELL_CACHE)
+            .then((cache) => cache.addAll(SHELL_FILES))
+            .catch((error) => console.error("Failed to cache app shell:", error))
+            .then(() => self.skipWaiting())
     );
 });
 
 self.addEventListener("activate", (event) => {
-    console.log("Service Worker activating...");
-
+    const keep = [SHELL_CACHE, STATIC_CACHE, PAGES_CACHE];
     event.waitUntil(
         caches
             .keys()
-            .then((cacheNames) => {
-                return Promise.all(
-                    cacheNames
-                        .filter(
-                            (cacheName) =>
-                                cacheName !== APP_SHELL_CACHE &&
-                                cacheName !== STATIC_CACHE &&
-                                cacheName !== DYNAMIC_CACHE
-                        )
-                        .map((cacheName) => {
-                            return caches.delete(cacheName);
-                        })
-                );
-            })
-            .then(() => {
-                console.log("service worker activated");
-                return self.clients.claim();
-            })
+            .then((names) => Promise.all(names.filter((n) => !keep.includes(n)).map((n) => caches.delete(n))))
+            .then(() => self.clients.claim())
     );
 });
 
-self.addEventListener("fetch", (event) => {
-    console.log("Service Worker fetching...");
+// فقط پاسخ‌های سالم و بدون ریدایرکت (مثلاً به صفحهٔ ورود) کش شوند
+function isCacheablePage(response) {
+    return response && response.ok && !response.redirected && response.type === "basic";
+}
 
-    const { request } = event;
-    const url = new URL(request.url);
-
-    if (request.method !== "GET") {
-        return;
+async function cachePage(url) {
+    try {
+        const response = await fetch(url, { credentials: "same-origin" });
+        if (isCacheablePage(response)) {
+            const cache = await caches.open(PAGES_CACHE);
+            await cache.put(new URL(url, self.location.origin).pathname, response);
+        }
+    } catch {
+        // آفلاین هستیم؛ بعداً دوباره
     }
+}
 
-    if (url.pathname.includes("/_next/static/")) {
-        event.respondWith(handleStaticAssetRequest(request));
+self.addEventListener("message", (event) => {
+    const data = event.data || {};
+    if (data.type === "WARM_PAGES" && Array.isArray(data.urls)) {
+        event.waitUntil(Promise.all(data.urls.map(cachePage)));
     }
-
-    if (url.pathname.startsWith("/api/")) {
-        event.respondWith(handleApiRequest(request));
-    }
-
-    if (request.mode === "navigate") {
-        event.respondWith(handleNavigationRequest(request));
+    // بعد از خروج، صفحات کاربر قبلی نباید از کش نمایش داده شوند
+    if (data.type === "CLEAR_PAGES") {
+        event.waitUntil(caches.delete(PAGES_CACHE));
     }
 });
 
-async function handleStaticAssetRequest(request) {
-    console.log("Handling static asset request", request.url);
-
+async function handleNavigation(request) {
+    const url = new URL(request.url);
     try {
-        const cachedResponse = await caches.match(request);
-        if (cachedResponse) {
-            console.log("Serving static asset from cache", request.url);
-            return cachedResponse;
+        const response = await fetch(request);
+        if (isCacheablePage(response)) {
+            const cache = await caches.open(PAGES_CACHE);
+            cache.put(url.pathname, response.clone());
         }
-
-        const networkResponse = await fetch(request);
-        if (networkResponse.ok) {
-            const cache = await caches.open(STATIC_CACHE);
-            cache.put(request, networkResponse.clone());
-            console.log("Cached static asset response:", request.url);
-        }
-        return networkResponse;
-    } catch (error) {
-        console.error("Failed to fetch static asset:", error);
-        return new Response("Offline: static asset not available", {
-            status: 503,
-        });
+        return response;
+    } catch {
+        const cache = await caches.open(PAGES_CACHE);
+        return (
+            (await cache.match(url.pathname)) ||
+            (await cache.match("/")) ||
+            (await caches.match("/offline.html")) ||
+            new Response("Offline", { status: 503 })
+        );
     }
 }
 
-async function handleApiRequest(request) {
-    console.log("Handling api request", request.url);
-
-    try {
-        const networkResponse = await fetch(request);
-        if (networkResponse.ok) {
-            const cache = await caches.open(DYNAMIC_CACHE);
-            cache.put(request, networkResponse.clone());
-            console.log("Cached api response:", request.url);
-        }
-        return networkResponse;
-    } catch (error) {
-        console.error("Failed to fetch api:", error);
-
-        const cachedResponse = await caches.match(request);
-        if (cachedResponse) {
-            console.log("Serving api response from cache", request.url);
-            return cachedResponse;
-        }
-
-        return new Response("Offline: no cached data available", {
-            status: 503,
-        });
+async function handleStatic(request) {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    const response = await fetch(request);
+    if (response.ok) {
+        const cache = await caches.open(STATIC_CACHE);
+        cache.put(request, response.clone());
     }
+    return response;
 }
 
-async function handleNavigationRequest(request) {
-    console.log("Handling navigation request", request.url);
+self.addEventListener("fetch", (event) => {
+    const { request } = event;
+    if (request.method !== "GET") return;
 
-    try {
-        const cachedResponse = await caches.match(request);
-        if (cachedResponse) {
-            console.log("Serving navigation from cache", request.url);
-            return cachedResponse;
-        }
+    const url = new URL(request.url);
+    // درخواست‌های Supabase و دامنه‌های دیگر دست‌نخورده می‌مانند
+    if (url.origin !== self.location.origin) return;
 
-        const networkResponse = await fetch(request);
-        if (networkResponse.ok) {
-            const cache = await caches.open(APP_SHELL_CACHE);
-            cache.put(request, networkResponse.clone());
-            console.log("Cached navigation response:", request.url);
-        }
-        return networkResponse;
-    } catch (error) {
-        console.error("Network failed, showing offline.html", error);
-        return caches.match("/offline.html");
+    if (request.mode === "navigate") {
+        event.respondWith(handleNavigation(request));
+        return;
     }
-}
 
-self.addEventListener("sync", (event) => {
-    console.log("Background sync triggered:", event.tag);
+    if (url.pathname.startsWith("/_next/static/") || SHELL_FILES.includes(url.pathname)) {
+        event.respondWith(handleStatic(request));
+    }
 });

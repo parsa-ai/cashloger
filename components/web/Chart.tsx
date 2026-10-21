@@ -1,86 +1,113 @@
 "use client"
 
-import { Pie, PieChart } from "recharts"
+import { Cell, Label, Pie, PieChart } from "recharts"
 
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card"
-import {
-    ChartContainer,
-    ChartLegend,
-    ChartLegendContent,
-} from "@/components/ui/chart"
-import { chartConfig, chartConfigIncome } from "@/lib/chartConfigs"
-import { useLogStore } from "@/store/useChartStore"
-import { convertToChartItem, getPersianYearMonth } from "@/lib/utils"
-import { categories, categoriesIncome } from "@/lib/data"
-import useDateStore from "@/store/useYearStore"
+import { ChartContainer } from "@/components/ui/chart"
+import { AnimatedNumber } from "@/components/web/AnimatedNumber"
+import { UNCATEGORIZED_COLOR } from "@/lib/palette"
+import { Category, ChartItem, LogEntry } from "@/lib/types"
+import { formatMoney, UNCATEGORIZED_LABEL } from "@/lib/utils"
+import { PieChartIcon } from "lucide-react"
 
-export const description = "چارت دایره‌ای هزینه‌ها و در امد ها را برای ماه انتخاب شده نمایش می‌دهد."
+export function buildChartItems(entries: LogEntry[], categories: Category[], isCosts: boolean): ChartItem[] {
+    const mode = isCosts ? "decrease" : "increase"
+    const totals = new Map<string | null, number>()
+    for (const entry of entries) {
+        if (entry.mode !== mode) continue
+        const key = entry.key && categories.some((c) => c.id === entry.key) ? entry.key : null
+        totals.set(key, (totals.get(key) ?? 0) + entry.visitors)
+    }
 
-export function ChartPieLabelList({isCosts = true}: {isCosts?: boolean}) {
-    const logs = useLogStore((state) => state.logs)
-    const date = useDateStore((s) => s.date) || new Date()
-    const { year: currentYear, month: currentMonth } = getPersianYearMonth(date);
-    const monthlyLog = logs.find(log => log.year === currentYear)?.months.find(month => month.month === currentMonth)
-    const chartData = monthlyLog ? convertToChartItem(monthlyLog, isCosts ? categories : categoriesIncome, isCosts) : []
-    const isEmpty = chartData.every((entry: any) => entry.visitors === 0)
-    const cardTitle = date.toLocaleString("fa-IR", { month: "short" }) + " " + date.toLocaleString("fa-IR", { year: "numeric" })
-    const cardDescription = `نمودار ${isCosts ? "هزینه" : "درآمد"} های `
-    if (isEmpty) {
+    const items: ChartItem[] = categories
+        .filter((c) => totals.get(c.id))
+        .map((c) => ({ id: c.id, category: c.label, visitors: totals.get(c.id)!, fill: c.color }))
+
+    const uncategorized = totals.get(null)
+    if (uncategorized) {
+        items.push({ id: "uncategorized", category: UNCATEGORIZED_LABEL, visitors: uncategorized, fill: UNCATEGORIZED_COLOR })
+    }
+    return items.sort((a, b) => b.visitors - a.visitors)
+}
+
+export function SpendingChart({ items, isCosts }: { items: ChartItem[]; isCosts: boolean }) {
+    const total = items.reduce((sum, item) => sum + item.visitors, 0)
+
+    if (items.length === 0) {
         return (
-            <Card className="flex flex-col gap-0">
-                <CardHeader className="items-center pb-0 flex">
-                    <CardDescription>{cardDescription}</CardDescription>
-                    <CardTitle>{cardTitle}</CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1 pt-5">
-                    <div className="text-muted-foreground">هیچ داده‌ای برای نمایش وجود ندارد.</div>
-                </CardContent>
-            </Card>
+            <div className="flex animate-item-in flex-col items-center gap-3 py-12 text-center text-muted-foreground">
+                <span className="grid size-14 place-items-center rounded-full bg-muted">
+                    <PieChartIcon className="size-6" />
+                </span>
+                <p className="text-sm">
+                    این ماه هنوز {isCosts ? "هزینه‌ای" : "درآمدی"} ثبت نشده.
+                </p>
+            </div>
         )
     }
+
     return (
-        <Card className="flex flex-col gap-0">
-            <CardHeader className="items-center pb-0 flex">
-                <CardDescription>{cardDescription}</CardDescription>
-                <CardTitle>{cardTitle}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 pb-10">
-                <ChartContainer
-                    config={isCosts ? chartConfig : chartConfigIncome}
-                    className="[&_.recharts-pie-label-text]:fill-foreground mx-auto aspect-square max-h-90 pb-0"
-                >
-                    <PieChart>
-                        <Pie className="translate-y-4" data={chartData} dataKey="visitors"
-                            label={({ payload, ...props }) => {
-                                if (payload.visitors === 0) return null
+        <div className="animate-item-in space-y-5">
+            <ChartContainer config={{}} className="mx-auto aspect-square max-h-60">
+                <PieChart>
+                    <Pie
+                        data={items}
+                        dataKey="visitors"
+                        nameKey="category"
+                        innerRadius="68%"
+                        outerRadius="100%"
+                        paddingAngle={items.length > 1 ? 2 : 0}
+                        cornerRadius={6}
+                        stroke="none"
+                        animationDuration={900}
+                        animationEasing="ease-out"
+                    >
+                        {items.map((item) => (
+                            <Cell key={item.id} fill={item.fill} />
+                        ))}
+                        <Label
+                            content={({ viewBox }) => {
+                                if (!viewBox || !("cx" in viewBox)) return null
                                 return (
-                                    <text
-                                        cx={props.cx}
-                                        cy={props.cy + 16}
-                                        x={props.x}
-                                        y={props.y + 16}
-                                        textAnchor={props.textAnchor}
-                                        dominantBaseline={props.dominantBaseline}
-                                        fill="var(--foreground)"
-                                    >
-                                        {payload.visitors.toLocaleString('fa-IR')}
-                                    </text>
+                                    <foreignObject x={(viewBox.cx ?? 0) - 80} y={(viewBox.cy ?? 0) - 30} width={160} height={60}>
+                                        <div className="flex h-full flex-col items-center justify-center">
+                                            <span className="text-xs text-muted-foreground">
+                                                مجموع {isCosts ? "هزینه" : "درآمد"}
+                                            </span>
+                                            <span className="text-xl font-extrabold">
+                                                <AnimatedNumber value={total} />
+                                            </span>
+                                        </div>
+                                    </foreignObject>
                                 )
                             }}
-                            labelLine={false} nameKey="category" />
-                        <ChartLegend
-                            content={<ChartLegendContent nameKey="category" />}
-                            className="translate-y-10 flex-wrap gap-2  *:justify-center"
                         />
-                    </PieChart>
-                </ChartContainer>
-            </CardContent>
-        </Card>
+                    </Pie>
+                </PieChart>
+            </ChartContainer>
+
+            <ul className="space-y-3">
+                {items.map((item, i) => {
+                    const percent = total ? (item.visitors / total) * 100 : 0
+                    return (
+                        <li key={item.id} className="stagger animate-item-in space-y-1.5" style={{ "--i": i } as React.CSSProperties}>
+                            <div className="flex items-center gap-2 text-sm">
+                                <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.fill }} />
+                                <span className="flex-1 truncate font-medium">{item.category}</span>
+                                <span className="text-xs text-muted-foreground tabular-nums">
+                                    {Math.round(percent).toLocaleString("fa-IR")}٪
+                                </span>
+                                <span className="w-24 text-left font-semibold tabular-nums">{formatMoney(item.visitors)}</span>
+                            </div>
+                            <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                                <div
+                                    className="h-full origin-right animate-[bar-grow_900ms_var(--ease-ios)_both] rounded-full transition-[width] duration-700 ease-ios"
+                                    style={{ width: `${percent}%`, backgroundColor: item.fill }}
+                                />
+                            </div>
+                        </li>
+                    )
+                })}
+            </ul>
+        </div>
     )
 }

@@ -1,297 +1,260 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { SubmitEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Loader2, Lock, User, LogOut, CheckCircle, AlertCircle, Save } from 'lucide-react'
-import { ModeToggle } from '@/components/ui/ModeToggle'
-
+import { CloudCheck, CloudOff, FileSpreadsheet, KeyRound, Loader2, LogOut, RefreshCw, Tags } from 'lucide-react'
+import type { User } from '@supabase/supabase-js'
 import { Blobatar } from "@blobatar/react"
 import "blobatar/motion.css"
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { ExportSheet } from '@/components/web/ExportSheet'
+import { Group, GroupItem } from '@/components/web/Group'
+import { ThemeSettings } from '@/components/web/ThemeSettings'
+import { createClient } from '@/lib/supabase/client'
+import { haptic } from '@/lib/utils'
+import { useLogStore } from '@/store/useChartStore'
+import { toast } from '@/store/useToastStore'
+
+function PasswordSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const supabase = createClient()
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+
+  const handleSubmit = async (e: SubmitEvent) => {
+    e.preventDefault()
+    setError(null)
+
+    if (newPassword.length < 6) {
+      setError('رمز عبور باید حداقل ۶ کاراکتر باشد')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setError('رمز عبور جدید و تکرار آن یکسان نیستند')
+      return
+    }
+
+    setIsSaving(true)
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    setIsSaving(false)
+
+    if (error) {
+      setError(error.message)
+      return
+    }
+    toast('رمز عبور تغییر کرد', 'success')
+    setNewPassword('')
+    setConfirmPassword('')
+    onOpenChange(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <DialogHeader>
+            <DialogTitle>تغییر رمز عبور</DialogTitle>
+            <DialogDescription>حداقل ۶ کاراکتر</DialogDescription>
+          </DialogHeader>
+          <Input
+            type="password"
+            placeholder="رمز عبور جدید"
+            autoComplete="new-password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            disabled={isSaving}
+          />
+          <Input
+            type="password"
+            placeholder="تکرار رمز عبور جدید"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            disabled={isSaving}
+          />
+          {error && <p className="animate-item-in px-1 text-sm text-destructive">{error}</p>}
+          <Button type="submit" size="lg" className="mb-2 w-full" disabled={isSaving}>
+            {isSaving && <Loader2 className="animate-spin" />}
+            ذخیره رمز عبور
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function formatSyncTime(timestamp: number | null) {
+  if (!timestamp) return 'هنوز همگام نشده'
+  return 'آخرین همگام‌سازی ' + new Date(timestamp).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })
+}
 
 export default function UserPage() {
   const router = useRouter()
   const supabase = createClient()
-  
-  const [user, setUser] = useState<any>(null)
+
+  const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile')
-  
   const [name, setName] = useState('')
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  
-  const [profileError, setProfileError] = useState<string | null>(null)
-  const [profileSuccess, setProfileSuccess] = useState<string | null>(null)
-  const [securityError, setSecurityError] = useState<string | null>(null)
-  const [securitySuccess, setSecuritySuccess] = useState<string | null>(null)
-  const [isSaving, setIsSaving] = useState(false)
-  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [isSavingName, setIsSavingName] = useState(false)
+  const [passwordOpen, setPasswordOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
+  const [confirmSignOut, setConfirmSignOut] = useState(false)
+
+  const isOnline = useLogStore((s) => s.isOnline)
+  const isSyncing = useLogStore((s) => s.isSyncing)
+  const pending = useLogStore((s) => s.queue.length)
+  const lastSyncedAt = useLogStore((s) => s.lastSyncedAt)
+  const categoryCount = useLogStore((s) => s.categories.length)
+  const sync = useLogStore((s) => s.sync)
+  const reset = useLogStore((s) => s.reset)
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        setUser(user)
-        setName(user.user_metadata?.full_name || user.user_metadata?.name || '')
-      }
-      setIsLoading(false)
-    }
-    getUser()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // getSession از حافظهٔ دستگاه می‌خواند و آفلاین هم کار می‌کند
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user)
         setName(session.user.user_metadata?.full_name || session.user.user_metadata?.name || '')
-      } else {
-        setUser(null)
-        router.push('/login')
       }
+      setIsLoading(false)
     })
+  }, [supabase])
 
-    return () => subscription.unsubscribe()
-  }, [supabase, router])
-
-  const handleProfileUpdate = async (e: React.FormEvent) => {
+  const handleNameSave = async (e: SubmitEvent) => {
     e.preventDefault()
-    setProfileError(null)
-    setProfileSuccess(null)
-    setIsSaving(true)
-
-    try {
-      const updates: any = {}
-      if (name) updates.full_name = name
-
-      const { error } = await supabase.auth.updateUser({
-        data: updates
-      })
-      if (error) throw error
-
-      setProfileSuccess('پروفایل با موفقیت به‌روزرسانی شد')
-      setUser((prev: any) => ({ ...prev, user_metadata: { ...prev.user_metadata, ...updates } }))
-    } catch (err) {
-      setProfileError(err instanceof Error ? err.message : 'خطا در به‌روزرسانی')
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSecurityError(null)
-    setSecuritySuccess(null)
-
-    if (newPassword !== confirmPassword) {
-      setSecurityError('رمز عبور جدید و تکرار آن یکسان نیستند')
+    setIsSavingName(true)
+    const { error } = await supabase.auth.updateUser({ data: { full_name: name.trim() } })
+    setIsSavingName(false)
+    if (error) {
+      toast(error.message, 'error')
       return
     }
-
-    if (newPassword.length < 6) {
-      setSecurityError('رمز عبور باید حداقل ۶ کاراکتر باشد')
-      return
-    }
-
-    setIsChangingPassword(true)
-
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      })
-      if (error) throw error
-
-      setSecuritySuccess('رمز عبور با موفقیت تغییر کرد')
-      setCurrentPassword('')
-      setNewPassword('')
-      setConfirmPassword('')
-    } catch (err) {
-      setSecurityError(err instanceof Error ? err.message : 'خطا در تغییر رمز عبور')
-    } finally {
-      setIsChangingPassword(false)
-    }
+    haptic([10, 40, 10])
+    toast('نام ذخیره شد', 'success')
   }
 
   const handleSignOut = async () => {
+    if (pending > 0 && !confirmSignOut) {
+      setConfirmSignOut(true)
+      haptic()
+      return
+    }
     await supabase.auth.signOut()
+    reset(true)
     router.push('/login')
     router.refresh()
   }
 
   if (isLoading) {
     return (
-      <div className="max-w-2xl mx-auto py-8">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-muted rounded-lg w-1/4" />
-          <div className="h-64 bg-muted rounded-lg" />
-        </div>
+      <div className="space-y-6">
+        <div className="h-24 animate-pulse rounded-3xl bg-muted" />
+        <div className="h-40 animate-pulse rounded-3xl bg-muted" />
       </div>
     )
   }
 
-  if (!user) {
-    return null
-  }
-
-  const displayName = name || user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'user'
-  const displayEmail = user.email || ''
+  const displayName = name || user?.email || 'user'
+  const savedName = user?.user_metadata?.full_name || user?.user_metadata?.name || ''
 
   return (
-    <div className="max-w-2xl mx-auto py-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">تنظیمات حساب کاربری</h1>
-          <p className="text-muted-foreground">مدیریت پروفایل و امنیت</p>
+    <div className="space-y-7">
+      <section className="flex animate-item-in items-center gap-4 rounded-3xl bg-card p-4">
+        <div className="size-16 shrink-0 overflow-hidden rounded-full">
+          <Blobatar animate="always" name={displayName} />
         </div>
-        <div className="flex items-center gap-2">
-          <ModeToggle />
+        <div className="min-w-0">
+          <h2 className="truncate text-lg font-bold">{savedName || 'کاربر کش لاگر'}</h2>
+          <p className="truncate text-sm text-muted-foreground" dir="ltr">{user?.email}</p>
         </div>
-      </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-6">
-            <div className="relative">
-              <Avatar className="h-20 w-20">
-                {displayName ? (
-                  <Blobatar
-                    animate='always'
-                    name={displayName}
-                  />
-                ) : (
-                  <AvatarFallback className="text-2xl">{displayName.charAt(0).toUpperCase()}</AvatarFallback>
-                )}
-              </Avatar>
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold">{displayName}</h2>
-              <p className="text-muted-foreground">{displayEmail}</p>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab as any}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="profile">
-                <User className="mr-2 h-4 w-4" />
-                پروفایل
-              </TabsTrigger>
-              <TabsTrigger value="security">
-                <Lock className="mr-2 h-4 w-4" />
-                امنیت
-              </TabsTrigger>
-            </TabsList>
+      <Group title="پروفایل">
+        <form onSubmit={handleNameSave} className="flex items-center gap-2 p-3">
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="نام و نام خانوادگی"
+            disabled={isSavingName}
+          />
+          <Button type="submit" variant="tinted" disabled={isSavingName || name.trim() === savedName}>
+            {isSavingName && <Loader2 className="animate-spin" />}
+            ذخیره
+          </Button>
+        </form>
+      </Group>
 
-            <TabsContent value="profile" className="mt-6 space-y-6">
-              <form onSubmit={handleProfileUpdate} className="space-y-4" dir='rtl'>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">نام و نام خانوادگی</label>
-                  <Input
-                    id="name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="نام خود را وارد کنید"
-                    disabled={isSaving}
-                  />
-                </div>
+      <ThemeSettings />
 
-                {profileError && (
-                  <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
-                    <AlertCircle className="h-4 w-4" />
-                    <span>{profileError}</span>
-                  </div>
-                )}
-                {profileSuccess && (
-                  <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
-                    <CheckCircle className="h-4 w-4" />
-                    <span>{profileSuccess}</span>
-                  </div>
-                )}
+      <Group
+        title="داده‌ها"
+        footer="بدون اینترنت هم می‌تونی تراکنش ثبت کنی؛ وقتی آنلاین شدی خودکار با سرور همگام می‌شه."
+      >
+        <GroupItem
+          href="/categories"
+          icon={<Tags />}
+          iconColor="oklch(0.65 0.18 290)"
+          title="دسته‌بندی‌ها"
+          trailing={<span className="text-sm text-muted-foreground">{categoryCount.toLocaleString('fa-IR')}</span>}
+        />
+        <GroupItem
+          onClick={() => setExportOpen(true)}
+          icon={<FileSpreadsheet />}
+          iconColor="oklch(0.6 0.15 150)"
+          title="خروجی اکسل"
+          chevron
+        />
+        <GroupItem
+          onClick={() => sync()}
+          icon={isOnline ? <CloudCheck /> : <CloudOff />}
+          iconColor={isOnline ? 'oklch(0.62 0.16 230)' : 'oklch(0.7 0.16 70)'}
+          title={isOnline ? 'همگام‌سازی' : 'آفلاین'}
+          subtitle={
+            pending > 0
+              ? `${pending.toLocaleString('fa-IR')} تغییر در انتظار ارسال`
+              : formatSyncTime(lastSyncedAt)
+          }
+          trailing={<RefreshCw className={`size-4 text-muted-foreground ${isSyncing ? 'animate-spin' : ''}`} />}
+        />
+      </Group>
 
-                <Button type="submit" disabled={isSaving}>
-                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  <Save className="mr-2 h-4 w-4" />
-                  ذخیره تغییرات
-                </Button>
-              </form>
-            </TabsContent>
+      <Group title="امنیت">
+        <GroupItem
+          onClick={() => setPasswordOpen(true)}
+          icon={<KeyRound />}
+          iconColor="oklch(0.55 0.02 260)"
+          title="تغییر رمز عبور"
+          chevron
+        />
+      </Group>
 
-            <TabsContent value="security" className="mt-6 space-y-6">
-              <form onSubmit={handlePasswordChange} className="space-y-4 " dir='rtl'>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">رمز عبور فعلی</label>
-                  <Input
-                    id="currentPassword"
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    disabled={isChangingPassword}
-                  />
-                </div>
+      <Group
+        footer={
+          confirmSignOut
+            ? `${pending.toLocaleString('fa-IR')} تغییر هنوز به سرور نرسیده و با خروج از بین می‌رود. برای خروج دوباره بزن.`
+            : undefined
+        }
+      >
+        <GroupItem
+          onClick={handleSignOut}
+          icon={<LogOut />}
+          iconColor="var(--destructive)"
+          title={confirmSignOut ? 'خروج بدون ذخیره' : 'خروج از حساب'}
+          destructive
+        />
+      </Group>
 
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">رمز عبور جدید</label>
-                  <Input
-                    id="newPassword"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    disabled={isChangingPassword}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">تکرار رمز عبور جدید</label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    disabled={isChangingPassword}
-                  />
-                </div>
-
-                {securityError && (
-                  <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
-                    <AlertCircle className="h-4 w-4" />
-                    <span>{securityError}</span>
-                  </div>
-                )}
-                {securitySuccess && (
-                  <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
-                    <CheckCircle className="h-4 w-4" />
-                    <span>{securitySuccess}</span>
-                  </div>
-                )}
-
-                <Button type="submit" disabled={isChangingPassword}>
-                  {isChangingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  <Lock className="mr-2 h-4 w-4" />
-                  تغییر رمز عبور
-                </Button>
-              </form>
-
-              <Separator className="my-6" />
-              
-              <div className="flex items-center justify-between p-4 bg-destructive/5 rounded-lg border border-destructive/10" dir='rtl'>
-                <div>
-                  <p className="font-medium text-destructive">خروج از حساب کاربری</p>
-                </div>
-                <Button variant="destructive" onClick={handleSignOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  خروج
-                </Button>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+      <PasswordSheet open={passwordOpen} onOpenChange={setPasswordOpen} />
+      <ExportSheet open={exportOpen} onOpenChange={setExportOpen} />
     </div>
   )
 }

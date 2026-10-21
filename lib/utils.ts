@@ -1,56 +1,11 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { Category, ChartItem, MonthlyLog } from "@/lib/types";
-import { ChartConfig } from "@/components/ui/chart";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function convertToChartConfig(categories: Category[]) {
-  const result: ChartConfig = {};
-  categories.forEach(item => {
-    if (item.key) {
-      result[item.key] = {
-        label: item.label,
-        color: item.color || undefined
-      };
-    }
-  });
-  return result;
-}
-
-export function convertToChartItem(monthlyLog: MonthlyLog, categories: Category[], isCosts = true): ChartItem[] {
-  const chartItems: ChartItem[] = [];
-  categories.forEach(category => {
-    let totalVisitors = 0;
-    const fill = category.fill || category.key ? `var(--color-${category.key})` : "var(--color-default)";
-    if (isCosts) {
-      monthlyLog.entries.forEach(entry => {
-        if (entry.mode === "decrease") {
-          if (entry.key === category.key) {
-            totalVisitors += entry.visitors;
-          }
-        }
-      });
-    }
-    else{
-      monthlyLog.entries.forEach(entry => {
-        if (entry.mode === "increase") {
-          if (entry.key === category.key) {
-            totalVisitors += entry.visitors;
-          }
-        }
-      });
-    }
-    chartItems.push({
-      category: category.label,
-      visitors: totalVisitors,
-      fill: fill
-    });
-  });
-  return chartItems;
-}
+export const UNCATEGORIZED_LABEL = "بدون دسته‌بندی"
 
 export function getPersianYearMonth(date: Date) {
   const formatter = new Intl.DateTimeFormat("en-US-u-ca-persian", {
@@ -64,4 +19,25 @@ export function getPersianYearMonth(date: Date) {
   const month = parts.find(p => p.type === "month")!.value;
 
   return { year, month };
+}
+
+export function formatMoney(value: number) {
+  return Math.round(value).toLocaleString("fa-IR")
+}
+
+export function formatMonthTitle(date: Date) {
+  return date.toLocaleDateString("fa-IR", { month: "long", year: "numeric" })
+}
+
+export function formatDayTitle(date: Date) {
+  return date.toLocaleDateString("fa-IR", { weekday: "long", day: "numeric", month: "long" })
+}
+
+// لرزش کوتاه برای بازخورد لمسی (روی دستگاه‌هایی که پشتیبانی می‌کنند)
+export function haptic(pattern: number | number[] = 8) {
+  try {
+    navigator.vibrate?.(pattern)
+  } catch {
+    // پشتیبانی نمی‌شود
+  }
 }

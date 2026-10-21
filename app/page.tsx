@@ -1,13 +1,5 @@
-import { ChartTabs } from "@/components/web/ChartTabs";
-import Toutal from "@/components/web/Toutal";
+import { HomeView } from "@/components/web/HomeView";
 
-
-export default function Home() {  
-
-  return (
-    <>
-      <ChartTabs />
-      <Toutal/>
-    </>
-  )
+export default function Home() {
+  return <HomeView />
 }

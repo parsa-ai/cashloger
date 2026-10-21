@@ -1,0 +1,229 @@
+// موتور همگام‌سازی آفلاین: هر تغییر اول روی دستگاه اعمال و در صف ذخیره می‌شود،
+// بعد هر وقت اینترنت بود به ترتیب به دیتابیس فرستاده می‌شود.
+
+import type { SupabaseClient } from "@supabase/supabase-js"
+import { normalizeColor } from "@/lib/palette"
+import { Category, LogEntry, LogKind } from "@/lib/types"
+
+export interface TransactionRow {
+    id: string
+    category_id: string | null
+    kind: LogKind
+    amount: number
+    description: string | null
+    occurred_at: string
+}
+
+export type CategoryRow = Category
+
+export type Op = { opId: string } & (
+    | { type: "tx.upsert"; row: TransactionRow }
+    | { type: "tx.delete"; id: string }
+    | { type: "cat.upsert"; row: CategoryRow }
+    | { type: "cat.delete"; id: string }
+)
+
+export interface LocalData {
+    entries: LogEntry[]
+    categories: Category[]
+}
+
+export const TRANSACTION_COLUMNS = "id, category_id, kind, amount, description, occurred_at"
+export const CATEGORY_COLUMNS = "id, kind, label, color"
+
+export function rowToEntry(row: TransactionRow): LogEntry {
+    return {
+        id: row.id,
+        key: row.category_id,
+        date: new Date(row.occurred_at),
+        visitors: Number(row.amount),
+        description: row.description || undefined,
+        mode: row.kind === "income" ? "increase" : "decrease",
+    }
+}
+
+export function entryToRow(entry: LogEntry): TransactionRow {
+    return {
+        id: entry.id,
+        category_id: entry.key,
+        kind: entry.mode === "increase" ? "income" : "cost",
+        amount: entry.visitors,
+        description: entry.description || null,
+        occurred_at: entry.date.toISOString(),
+    }
+}
+
+function opTarget(op: Op) {
+    const table = op.type.startsWith("tx.") ? "tx" : "cat"
+    const id = "row" in op ? op.row.id : op.id
+    return `${table}:${id}`
+}
+
+// عملیات جدید، عملیات قبلیِ ارسال‌نشده روی همان ردیف را بی‌اثر می‌کند
+export function enqueue(queue: Op[], op: Op): Op[] {
+    const target = opTarget(op)
+    return [...queue.filter((o) => opTarget(o) !== target || !o.type.endsWith(".upsert")), op]
+}
+
+// اعمال یک عملیات روی داده‌های محلی (برای تغییر خوش‌بینانه و بازپخش صف بعد از دریافت از سرور)
+export function applyOp(data: LocalData, op: Op): LocalData {
+    switch (op.type) {
+        case "tx.upsert": {
+            const entry = rowToEntry(op.row)
+            const exists = data.entries.some((e) => e.id === entry.id)
+            return {
+                ...data,
+                entries: exists
+                    ? data.entries.map((e) => (e.id === entry.id ? entry : e))
+                    : [...data.entries, entry],
+            }
+        }
+        case "tx.delete":
+            return { ...data, entries: data.entries.filter((e) => e.id !== op.id) }
+        case "cat.upsert": {
+            const exists = data.categories.some((c) => c.id === op.row.id)
+            return {
+                ...data,
+                categories: exists
+                    ? data.categories.map((c) => (c.id === op.row.id ? op.row : c))
+                    : [...data.categories, op.row],
+            }
+        }
+        case "cat.delete":
+            return {
+                categories: data.categories.filter((c) => c.id !== op.id),
+                entries: data.entries.map((e) => (e.key === op.id ? { ...e, key: null } : e)),
+            }
+    }
+}
+
+interface RemoteError {
+    message: string
+    code?: string
+}
+
+export function isNetworkError(error: RemoteError | null, status?: number) {
+    if (!error) return false
+    if (typeof navigator !== "undefined" && !navigator.onLine) return true
+    if (status === 0) return true
+    return /failed to fetch|networkerror|load failed|network request failed|fetch failed/i.test(error.message)
+}
+
+export type OpResult = { ok: true } | { ok: false; network: true } | { ok: false; network: false; message: string }
+
+function toResult(error: RemoteError | null, status: number): OpResult {
+    if (!error) return { ok: true }
+    if (isNetworkError(error, status)) return { ok: false, network: true }
+    return { ok: false, network: false, message: error.message }
+}
+
+export async function runOp(supabase: SupabaseClient, op: Op): Promise<OpResult> {
+    try {
+        switch (op.type) {
+            case "tx.upsert": {
+                const { error, status } = await supabase.from("transactions").upsert(op.row, { onConflict: "id" })
+                // اگر دسته‌اش در این فاصله (مثلاً از دستگاه دیگر) حذف شده بود، بدون دسته ذخیره کن
+                if (error && op.row.category_id && (error.code === "42501" || error.code === "23503")) {
+                    const retry = await supabase
+                        .from("transactions")
+                        .upsert({ ...op.row, category_id: null }, { onConflict: "id" })
+                    return toResult(retry.error, retry.status)
+                }
+                return toResult(error, status)
+            }
+            case "tx.delete": {
+                const { error, status } = await supabase.from("transactions").delete().eq("id", op.id)
+                return toResult(error, status)
+            }
+            case "cat.upsert": {
+                const { error, status } = await supabase.from("categories").upsert(op.row, { onConflict: "id" })
+                if (error?.code === "23505") {
+                    return { ok: false, network: false, message: `دسته‌بندی «${op.row.label}» از قبل وجود دارد` }
+                }
+                return toResult(error, status)
+            }
+            case "cat.delete": {
+                const { error, status } = await supabase.from("categories").delete().eq("id", op.id)
+                return toResult(error, status)
+            }
+        }
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        return toResult({ message }, 0)
+    }
+}
+
+export async function fetchRemote(
+    supabase: SupabaseClient
+): Promise<{ ok: true; data: LocalData } | { ok: false; network: boolean; message: string }> {
+    try {
+        const [categoriesRes, transactionsRes] = await Promise.all([
+            supabase.from("categories").select(CATEGORY_COLUMNS).order("created_at"),
+            supabase.from("transactions").select(TRANSACTION_COLUMNS).order("occurred_at"),
+        ])
+        const failed = categoriesRes.error ? categoriesRes : transactionsRes.error ? transactionsRes : null
+        if (failed?.error) {
+            return { ok: false, network: isNetworkError(failed.error, failed.status), message: failed.error.message }
+        }
+        return {
+            ok: true,
+            data: {
+                categories: (categoriesRes.data as Category[]).map((c) => ({ ...c, color: normalizeColor(c.color) })),
+                entries: (transactionsRes.data as TransactionRow[]).map(rowToEntry),
+            },
+        }
+    } catch (err) {
+        return { ok: false, network: true, message: err instanceof Error ? err.message : String(err) }
+    }
+}
+
+// ذخیرهٔ محلی برای هر کاربر جداگانه
+const storageKey = (userId: string) => `cashlog:v1:${userId}`
+
+interface Snapshot {
+    entries: (Omit<LogEntry, "date"> & { date: string })[]
+    categories: Category[]
+    queue: Op[]
+    lastSyncedAt: number | null
+}
+
+export function loadSnapshot(userId: string) {
+    try {
+        const raw = localStorage.getItem(storageKey(userId))
+        if (!raw) return null
+        const snapshot = JSON.parse(raw) as Snapshot
+        return {
+            entries: snapshot.entries.map((e) => ({ ...e, date: new Date(e.date) })),
+            categories: snapshot.categories,
+            queue: snapshot.queue,
+            lastSyncedAt: snapshot.lastSyncedAt,
+        }
+    } catch {
+        return null
+    }
+}
+
+export function saveSnapshot(
+    userId: string,
+    data: { entries: LogEntry[]; categories: Category[]; queue: Op[]; lastSyncedAt: number | null }
+) {
+    try {
+        const snapshot: Snapshot = {
+            entries: data.entries.map((e) => ({ ...e, date: e.date.toISOString() })),
+            categories: data.categories,
+            queue: data.queue,
+            lastSyncedAt: data.lastSyncedAt,
+        }
+        localStorage.setItem(storageKey(userId), JSON.stringify(snapshot))
+    } catch {
+        // فضای ذخیره‌سازی در دسترس نیست؛ داده‌ها فقط در حافظه می‌مانند
+    }
+}
+
+export function clearSnapshot(userId: string) {
+    try {
+        localStorage.removeItem(storageKey(userId))
+    } catch {
+        // نادیده بگیر
+    }
+}

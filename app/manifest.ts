@@ -2,13 +2,15 @@ import type { MetadataRoute } from 'next'
  
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Cash Logger',
-    short_name: 'Cash',
-    description: 'Log your cash flow',
+    name: 'کش لاگر',
+    short_name: 'کش لاگر',
+    description: 'ثبت درآمد و هزینه‌های روزانه',
+    lang: 'fa',
+    dir: 'rtl',
     start_url: '/',
     display: 'standalone',
-    background_color: '#ffffff',
-    theme_color: '#000000',
+    background_color: '#f3f4f8',
+    theme_color: '#f3f4f8',
     icons: [
       {
         src: '/web-app-manifest-192x192.png',

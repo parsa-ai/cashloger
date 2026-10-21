@@ -1,6 +1,9 @@
+export type LogKind = "cost" | "income";
+
 export interface LogEntry {
     id : string;
-    key: string;
+    // category id, null when its category was deleted
+    key: string | null;
     date: Date;
     visitors: number;
     description?: string;
@@ -16,22 +19,15 @@ export interface YearlyLog {
     months: MonthlyLog[];
 }
 
-export interface LogStore {
-    logs: YearlyLog[];
-
-    addLog: (entry: LogEntry) => void;
-    removeLog: (id: string) => void;
-    updateLog: (entry: LogEntry) => void;
-}
-
 export interface Category {
+    id: string;
+    kind: LogKind;
     label: string;
-    key?: string;
-    color?: string;
-    fill?: string;
+    color: string;
 }
 
 export interface ChartItem {
+    id: string;
     category: string;
     visitors: number;
     fill: string;

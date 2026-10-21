@@ -1,11 +1,5 @@
-import { LogsTable } from "@/components/web/LogsTable";
+import { TransactionList } from "@/components/web/TransactionList";
 
 export default function LogsPage() {
-    return (
-        <>
-            <section className="overflow-y-auto max-h-svh no-scrollbar">
-                <LogsTable />
-            </section>
-        </>
-    )
+    return <TransactionList />
 }
