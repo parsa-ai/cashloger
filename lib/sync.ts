@@ -59,10 +59,27 @@ function opTarget(op: Op) {
     return `${table}:${id}`
 }
 
-// عملیات جدید، عملیات قبلیِ ارسال‌نشده روی همان ردیف را بی‌اثر می‌کند
+// عملیات جدید جای upsert قبلیِ ارسال‌نشده روی همان ردیف را می‌گیرد.
+// جایگزینی در همان جای صف انجام می‌شود تا ترتیب حفظ شود (مثلاً دسته‌بندی قبل از تراکنشی که از آن استفاده می‌کند ساخته شود).
+// اولین عضو صف ممکن است همین الان در حال ارسال باشد، پس به آن دست نمی‌زنیم.
 export function enqueue(queue: Op[], op: Op): Op[] {
     const target = opTarget(op)
-    return [...queue.filter((o) => opTarget(o) !== target || !o.type.endsWith(".upsert")), op]
+    const index = queue.findIndex((o, i) => i > 0 && opTarget(o) === target && o.type.endsWith(".upsert"))
+    if (index === -1) return [...queue, op]
+    if (op.type.endsWith(".upsert")) return queue.map((o, i) => (i === index ? op : o))
+    return [...queue.filter((o, i) => i === 0 || opTarget(o) !== target || !o.type.endsWith(".upsert")), op]
+}
+
+// برای جلوگیری از رندر و انیمیشن دوباره وقتی داده‌های سرور با داده‌های فعلی فرقی ندارد
+export function sameData(a: LocalData, b: LocalData) {
+    if (a.entries.length !== b.entries.length || a.categories.length !== b.categories.length) return false
+    const entryKey = (e: LogEntry) =>
+        `${e.id}|${e.key}|${e.date.getTime()}|${e.visitors}|${e.description ?? ""}|${e.mode}`
+    const categoryKey = (c: Category) => `${c.id}|${c.kind}|${c.label}|${c.color}`
+    return (
+        a.entries.every((e, i) => entryKey(e) === entryKey(b.entries[i])) &&
+        a.categories.every((c, i) => categoryKey(c) === categoryKey(b.categories[i]))
+    )
 }
 
 // اعمال یک عملیات روی داده‌های محلی (برای تغییر خوش‌بینانه و بازپخش صف بعد از دریافت از سرور)

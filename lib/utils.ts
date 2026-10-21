@@ -7,18 +7,63 @@ export function cn(...inputs: ClassValue[]) {
 
 export const UNCATEGORIZED_LABEL = "بدون دسته‌بندی"
 
+// ساختن formatter گران است و برای هر تراکنش صدا زده می‌شود
+const persianFormatter = new Intl.DateTimeFormat("en-US-u-ca-persian", {
+  year: "numeric",
+  month: "2-digit",
+  day: "numeric",
+});
+
+function persianParts(date: Date) {
+  const parts = persianFormatter.formatToParts(date);
+  const get = (type: string) => parts.find(p => p.type === type)!.value;
+  return { year: get("year").replace(/\D/g, ""), month: get("month"), day: Number(get("day")) };
+}
+
 export function getPersianYearMonth(date: Date) {
-  const formatter = new Intl.DateTimeFormat("en-US-u-ca-persian", {
-    year: "numeric",
-    month: "2-digit",
-  });
-
-  const parts = formatter.formatToParts(date);
-
-  const year = parts.find(p => p.type === "year")!.value;
-  const month = parts.find(p => p.type === "month")!.value;
-
+  const { year, month } = persianParts(date);
   return { year, month };
+}
+
+export function isSamePersianMonth(a: Date, b: Date) {
+  const pa = getPersianYearMonth(a);
+  const pb = getPersianYearMonth(b);
+  return pa.year === pb.year && pa.month === pb.month;
+}
+
+export function isSameDay(a: Date, b: Date) {
+  return a.toDateString() === b.toDateString();
+}
+
+export function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+// روز اول ماه شمسیِ تاریخ داده‌شده (ساعت همان تاریخ حفظ می‌شود)
+export function startOfPersianMonth(date: Date) {
+  return addDays(date, 1 - persianParts(date).day);
+}
+
+// یک ماه شمسی جلو یا عقب، روی روز اول ماه
+export function shiftPersianMonth(date: Date, months: number) {
+  let result = startOfPersianMonth(date);
+  for (let i = 0; i < Math.abs(months); i++) {
+    result = months > 0 ? startOfPersianMonth(addDays(result, 32)) : startOfPersianMonth(addDays(result, -1));
+  }
+  return result;
+}
+
+// تاریخ پیش‌فرض تراکنش جدید وقتی کاربر ماه دیگری را نگاه می‌کند:
+// ماه جاری ← همین الان، ماه گذشته ← روز آخر آن ماه، ماه آینده ← روز اول آن ماه
+export function defaultEntryDate(viewDate: Date) {
+  const now = new Date();
+  if (isSamePersianMonth(viewDate, now)) return now;
+  const start = startOfPersianMonth(viewDate);
+  start.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+  if (start > now) return start;
+  return addDays(shiftPersianMonth(start, 1), -1);
 }
 
 export function formatMoney(value: number) {

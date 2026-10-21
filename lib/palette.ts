@@ -1,39 +1,68 @@
-// پالت ۶۴ رنگی دسته‌بندی‌ها: ۱۶ فام × ۴ تن با روشنایی و اشباع یکسان در هر تن
-// تا همهٔ رنگ‌ها کنار هم هماهنگ دیده شوند.
+// پالت ۶۴ رنگی دسته‌بندی‌ها: ۱۶ فام × ۴ تن.
+// هر رنگ نزدیک به بیشترین اشباع ممکن در sRGB برای فام خودش است تا همه به یک اندازه «تیز» باشند،
+// و روشنایی هر فام به سمت روشن‌ترین نقطهٔ طبیعی‌اش کشیده شده (زرد گِلی و آبی بی‌رنگ نمی‌شود).
+// مقادیر با اسکریپت تولید شده‌اند؛ دستی عوضشان نکن.
 
-export const PALETTE_HUES = [25, 45, 65, 85, 105, 130, 150, 170, 190, 210, 230, 250, 270, 290, 315, 345]
-
-export const PALETTE_TONES = [
-    { l: 0.86, c: 0.09 },
-    { l: 0.76, c: 0.14 },
-    { l: 0.65, c: 0.18 },
-    { l: 0.52, c: 0.16 },
+export const PALETTE_ROWS: string[][] = [
+    ["oklch(0.713 0.162 25)", "oklch(0.744 0.149 45)", "oklch(0.776 0.154 65)", "oklch(0.816 0.15 90)", "oklch(0.85 0.17 120)", "oklch(0.818 0.17 145)", "oklch(0.827 0.157 165)", "oklch(0.832 0.132 185)", "oklch(0.816 0.125 205)", "oklch(0.771 0.131 230)", "oklch(0.71 0.138 255)", "oklch(0.643 0.17 275)", "oklch(0.67 0.17 295)", "oklch(0.708 0.17 315)", "oklch(0.733 0.17 340)", "oklch(0.717 0.169 5)"],
+    ["oklch(0.655 0.22 25)", "oklch(0.69 0.189 45)", "oklch(0.725 0.156 65)", "oklch(0.77 0.151 90)", "oklch(0.808 0.184 120)", "oklch(0.773 0.22 145)", "oklch(0.783 0.158 165)", "oklch(0.788 0.133 185)", "oklch(0.77 0.126 205)", "oklch(0.72 0.138 230)", "oklch(0.653 0.181 255)", "oklch(0.578 0.22 275)", "oklch(0.608 0.22 295)", "oklch(0.65 0.22 315)", "oklch(0.678 0.22 340)", "oklch(0.66 0.22 5)"],
+    ["oklch(0.605 0.22 25)", "oklch(0.64 0.176 45)", "oklch(0.675 0.145 65)", "oklch(0.72 0.141 90)", "oklch(0.758 0.173 120)", "oklch(0.723 0.218 145)", "oklch(0.733 0.148 165)", "oklch(0.738 0.125 185)", "oklch(0.72 0.118 205)", "oklch(0.67 0.128 230)", "oklch(0.603 0.191 255)", "oklch(0.528 0.22 275)", "oklch(0.558 0.22 295)", "oklch(0.6 0.22 315)", "oklch(0.628 0.22 340)", "oklch(0.61 0.22 5)"],
+    ["oklch(0.548 0.2 25)", "oklch(0.579 0.156 45)", "oklch(0.611 0.129 65)", "oklch(0.651 0.125 90)", "oklch(0.685 0.153 120)", "oklch(0.653 0.193 145)", "oklch(0.662 0.131 165)", "oklch(0.667 0.111 185)", "oklch(0.651 0.105 205)", "oklch(0.606 0.114 230)", "oklch(0.545 0.169 255)", "oklch(0.478 0.2 275)", "oklch(0.505 0.2 295)", "oklch(0.543 0.2 315)", "oklch(0.568 0.2 340)", "oklch(0.552 0.2 5)"],
 ]
 
-export const PALETTE: string[] = PALETTE_TONES.flatMap((tone) =>
-    PALETTE_HUES.map((hue) => `oklch(${tone.l} ${tone.c} ${hue})`)
-)
+export const PALETTE: string[] = PALETTE_ROWS.flat()
 
-export const UNCATEGORIZED_COLOR = "oklch(0.7 0 0)"
+export const UNCATEGORIZED_COLOR = "oklch(0.68 0.01 260)"
+
+interface Oklch {
+    l: number
+    c: number
+    h: number
+}
+
+export function parseOklch(color: string): Oklch | null {
+    const match = color.match(/oklch\(\s*([\d.]+)(%?)\s+([\d.]+)\s+([\d.]+)/)
+    if (!match) return null
+    return {
+        l: parseFloat(match[1]) / (match[2] ? 100 : 1),
+        c: parseFloat(match[3]),
+        h: parseFloat(match[4]),
+    }
+}
+
+// فاصلهٔ ادراکی دو رنگ در فضای OKLab
+function distance(a: Oklch, b: Oklch) {
+    const ah = (a.h * Math.PI) / 180
+    const bh = (b.h * Math.PI) / 180
+    return Math.hypot(a.l - b.l, a.c * Math.cos(ah) - b.c * Math.cos(bh), a.c * Math.sin(ah) - b.c * Math.sin(bh))
+}
+
+const PARSED = PALETTE.map((color) => ({ color, value: parseOklch(color)! }))
 
 // رنگ‌های قدیمی (var(--chart-N)) قبل از اجرای مایگریشن رنگ‌ها
 const LEGACY_HUES = [25, 65, 105, 130, 170, 210, 250, 290, 315, 345]
 
+// هر رنگ ذخیره‌شده (از نسخه‌های قبلی پالت هم) به نزدیک‌ترین رنگ پالت فعلی نگاشت می‌شود
 export function normalizeColor(color: string) {
-    if (/^oklch\([0-9. ]{5,30}\)$/.test(color)) return color
+    if (PALETTE.includes(color)) return color
     const legacy = color.match(/^var\(--chart-(\d+)\)$/)
-    const hue = legacy ? LEGACY_HUES[Number(legacy[1]) - 1] : undefined
-    return `oklch(0.65 0.18 ${hue ?? 230})`
+    const target = legacy
+        ? { l: 0.65, c: 0.18, h: LEGACY_HUES[Number(legacy[1]) - 1] ?? 255 }
+        : parseOklch(color) ?? { l: 0.65, c: 0.18, h: 255 }
+    let best = PARSED[0]
+    for (const item of PARSED) {
+        if (distance(item.value, target) < distance(best.value, target)) best = item
+    }
+    return best.color
 }
 
-// رنگی از پالت که کمتر از بقیه بین دسته‌های موجود استفاده شده (اولویت با تن سوم)
+export function colorHue(color: string) {
+    return parseOklch(color)?.h ?? 255
+}
+
+// رنگی از پالت که کمتر از بقیه بین دسته‌های موجود استفاده شده (اولویت با تن پررنگ)
 export function suggestColor(usedColors: string[]) {
-    const ordered = [
-        ...PALETTE.slice(32, 48),
-        ...PALETTE.slice(16, 32),
-        ...PALETTE.slice(48, 64),
-        ...PALETTE.slice(0, 16),
-    ]
+    const ordered = [...PALETTE_ROWS[1], ...PALETTE_ROWS[2], ...PALETTE_ROWS[3], ...PALETTE_ROWS[0]]
     let best = ordered[0]
     let bestCount = Infinity
     for (const color of ordered) {
@@ -48,12 +77,11 @@ export function suggestColor(usedColors: string[]) {
 
 // تبدیل oklch به hex برای جاهایی که CSS نیست (مثل اکسل)
 export function oklchToHex(color: string): string | null {
-    const match = color.match(/oklch\(\s*([\d.]+)(%?)\s+([\d.]+)\s+([\d.]+)/)
-    if (!match) return null
+    const parsed = parseOklch(color)
+    if (!parsed) return null
 
-    const L = parseFloat(match[1]) / (match[2] ? 100 : 1)
-    const C = parseFloat(match[3])
-    const h = (parseFloat(match[4]) * Math.PI) / 180
+    const { l: L, c: C } = parsed
+    const h = (parsed.h * Math.PI) / 180
     const a = C * Math.cos(h)
     const b = C * Math.sin(h)
 

@@ -10,6 +10,7 @@ import {
   LocalData,
   Op,
   runOp,
+  sameData,
   saveSnapshot,
 } from "@/lib/sync";
 import { Category, LogEntry, LogKind, YearlyLog } from "@/lib/types";
@@ -160,7 +161,9 @@ export const useLogStore = create<LogStore>()((set, get) => {
           return;
         }
 
-        setData(get().queue.reduce(applyOp, remote.data));
+        const next = get().queue.reduce(applyOp, remote.data);
+        const { entries, categories } = get();
+        if (!sameData(next, { entries, categories })) setData(next);
         set({ isOnline: true, lastSyncedAt: Date.now() });
         persist();
       } finally {
