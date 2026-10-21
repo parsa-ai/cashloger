@@ -5,9 +5,12 @@ import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import AppShell from "@/components/web/AppShell";
 import DataLoader from "@/components/web/DataLoader";
 import { AppHeader } from "@/components/web/AppHeader";
+import { InstallPrompt } from "@/components/web/InstallPrompt";
+import { TransactionSheetHost } from "@/components/web/TransactionSheet";
 import { TabBar } from "@/components/web/TabBar";
 import { Toaster } from "@/components/web/Toaster";
 import { createClient } from "@/lib/supabase/server";
+import { installPromptScript } from "@/lib/pwa";
 import { colorThemeScript } from "@/lib/themes";
 
 const vazirmatn = Vazirmatn({
@@ -33,8 +36,8 @@ export const viewport: Viewport = {
   userScalable: false,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f3f4f8" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f1014" },
+    { media: "(prefers-color-scheme: light)", color: "#f2f4f6" },
+    { media: "(prefers-color-scheme: dark)", color: "#08090b" },
   ],
 };
 
@@ -50,11 +53,12 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const user = await getUser()
+  const userName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "user"
 
   return (
     <html lang="fa" dir="rtl" suppressHydrationWarning className={vazirmatn.variable}>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: colorThemeScript }} />
+        <script dangerouslySetInnerHTML={{ __html: colorThemeScript + installPromptScript }} />
       </head>
       <body className="font-sans">
         <ThemeProvider
@@ -66,13 +70,15 @@ export default async function RootLayout({
           <AppShell signedIn={!!user}>
             <DataLoader userId={user?.id ?? null} />
             <Toaster />
+            <InstallPrompt />
             {user ? (
               <div className="flex min-h-dvh flex-col">
-                <AppHeader />
-                <main className="mx-auto w-full max-w-2xl flex-1 px-4 pt-4 pb-[calc(max(env(safe-area-inset-bottom),0.5rem)+9.5rem)]">
+                <AppHeader userName={userName} />
+                <main className="mx-auto w-full max-w-2xl flex-1 px-4 pt-2 pb-[calc(max(env(safe-area-inset-bottom),0.5rem)+140px)]">
                   {children}
                 </main>
                 <TabBar />
+                <TransactionSheetHost />
               </div>
             ) : (
               children

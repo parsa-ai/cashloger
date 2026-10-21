@@ -1,13 +1,16 @@
 "use client"
 
-import { Cell, Label, Pie, PieChart } from "recharts"
+import { Cell, Pie, PieChart } from "recharts"
+import { surprised } from "blobatar/expression"
 
 import { ChartContainer } from "@/components/ui/chart"
 import { AnimatedNumber } from "@/components/web/AnimatedNumber"
+import { CategoryAvatar } from "@/components/web/Avatars"
+import { EmptyState } from "@/components/web/EmptyState"
+import { Row } from "@/components/web/Group"
 import { UNCATEGORIZED_COLOR } from "@/lib/palette"
 import { Category, ChartItem, LogEntry } from "@/lib/types"
 import { formatMoney, UNCATEGORIZED_LABEL } from "@/lib/utils"
-import { PieChartIcon } from "lucide-react"
 
 export function buildChartItems(entries: LogEntry[], categories: Category[], isCosts: boolean): ChartItem[] {
     const mode = isCosts ? "decrease" : "increase"
@@ -34,80 +37,71 @@ export function SpendingChart({ items, isCosts }: { items: ChartItem[]; isCosts:
 
     if (items.length === 0) {
         return (
-            <div className="flex animate-item-in flex-col items-center gap-3 py-12 text-center text-muted-foreground">
-                <span className="grid size-14 place-items-center rounded-full bg-muted">
-                    <PieChartIcon className="size-6" />
-                </span>
-                <p className="text-sm">
-                    این ماه هنوز {isCosts ? "هزینه‌ای" : "درآمدی"} ثبت نشده.
-                </p>
-            </div>
+            <EmptyState
+                expression={surprised}
+                title={isCosts ? "این ماه هنوز خرجی نکردی" : "این ماه هنوز درآمدی ثبت نشده"}
+                description="با دکمهٔ + اولین تراکنش رو ثبت کن."
+            />
         )
     }
 
     return (
-        <div className="animate-item-in space-y-5">
-            <ChartContainer config={{}} className="mx-auto aspect-square max-h-60">
-                <PieChart>
-                    <Pie
-                        data={items}
-                        dataKey="visitors"
-                        nameKey="category"
-                        innerRadius="68%"
-                        outerRadius="100%"
-                        paddingAngle={items.length > 1 ? 2 : 0}
-                        cornerRadius={6}
-                        stroke="none"
-                        animationDuration={900}
-                        animationEasing="ease-out"
-                    >
-                        {items.map((item) => (
-                            <Cell key={item.id} fill={item.fill} />
-                        ))}
-                        <Label
-                            content={({ viewBox }) => {
-                                if (!viewBox || !("cx" in viewBox)) return null
-                                return (
-                                    <foreignObject x={(viewBox.cx ?? 0) - 80} y={(viewBox.cy ?? 0) - 30} width={160} height={60}>
-                                        <div className="flex h-full flex-col items-center justify-center">
-                                            <span className="text-xs text-muted-foreground">
-                                                مجموع {isCosts ? "هزینه" : "درآمد"}
-                                            </span>
-                                            <span className="text-xl font-extrabold">
-                                                <AnimatedNumber value={total} />
-                                            </span>
-                                        </div>
-                                    </foreignObject>
-                                )
-                            }}
-                        />
-                    </Pie>
-                </PieChart>
-            </ChartContainer>
+        <div className="animate-fade-in">
+            <div className="relative mx-auto aspect-square w-full max-w-52 py-4">
+                <ChartContainer config={{}} className="aspect-square size-full">
+                    <PieChart>
+                        <Pie
+                            data={items}
+                            dataKey="visitors"
+                            nameKey="category"
+                            innerRadius="72%"
+                            outerRadius="100%"
+                            paddingAngle={items.length > 1 ? 1.5 : 0}
+                            cornerRadius={4}
+                            stroke="none"
+                            startAngle={90}
+                            endAngle={-270}
+                            animationDuration={700}
+                            animationEasing="ease-out"
+                        >
+                            {items.map((item) => (
+                                <Cell key={item.id} fill={item.fill} />
+                            ))}
+                        </Pie>
+                    </PieChart>
+                </ChartContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-[12px] text-muted-foreground">مجموع {isCosts ? "هزینه" : "درآمد"}</span>
+                    <span className="text-xl font-bold">
+                        <AnimatedNumber value={total} />
+                    </span>
+                </div>
+            </div>
 
-            <ul className="space-y-3">
-                {items.map((item, i) => {
-                    const percent = total ? (item.visitors / total) * 100 : 0
+            <div className="border-t border-separator">
+                {items.map((item) => {
+                    const percent = total ? Math.round((item.visitors / total) * 100) : 0
                     return (
-                        <li key={item.id} className="stagger animate-item-in space-y-1.5" style={{ "--i": i } as React.CSSProperties}>
-                            <div className="flex items-center gap-2 text-sm">
-                                <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.fill }} />
-                                <span className="flex-1 truncate font-medium">{item.category}</span>
-                                <span className="text-xs text-muted-foreground tabular-nums">
-                                    {Math.round(percent).toLocaleString("fa-IR")}٪
+                        <Row
+                            key={item.id}
+                            leading={<CategoryAvatar label={item.category} color={item.fill} size={32} />}
+                            title={item.category}
+                            subtitle={
+                                <span className="flex items-center gap-2">
+                                    <span className="h-1 flex-1 overflow-hidden rounded-full bg-fill">
+                                        <span
+                                            className="block h-full rounded-full transition-[width] duration-500 ease-out"
+                                            style={{ width: `${percent}%`, backgroundColor: item.fill }}
+                                        />
+                                    </span>
+                                    <span className="num w-8 text-left">{percent.toLocaleString("fa-IR")}٪</span>
                                 </span>
-                                <span className="w-24 text-left font-semibold tabular-nums">{formatMoney(item.visitors)}</span>
-                            </div>
-                            <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                                <div
-                                    className="h-full origin-right animate-[bar-grow_900ms_var(--ease-ios)_both] rounded-full transition-[width] duration-700 ease-ios"
-                                    style={{ width: `${percent}%`, backgroundColor: item.fill }}
-                                />
-                            </div>
-                        </li>
+                            }
+                            trailing={<span className="num text-[15px] font-semibold">{formatMoney(item.visitors)}</span>}
+                        />
                     )
                 })}
-            </ul>
+            </div>
         </div>
     )
 }

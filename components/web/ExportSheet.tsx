@@ -4,22 +4,24 @@ import { useState } from "react"
 import { FileSpreadsheet, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog"
-import { SegmentedControl } from "@/components/web/SegmentedControl"
+import { Dialog, DialogBody, DialogContent, DialogNav } from "@/components/ui/dialog"
+import { Group, Row } from "@/components/web/Group"
 import { exportToExcel } from "@/lib/exportExcel"
-import { formatMonthTitle, getPersianYearMonth, haptic } from "@/lib/utils"
+import { cn, formatMonthTitle, getPersianYearMonth, haptic } from "@/lib/utils"
 import { useMonthEntries } from "@/store/selectors"
 import { useLogStore } from "@/store/useChartStore"
 import { toast } from "@/store/useToastStore"
 import useDateStore from "@/store/useYearStore"
 
 type Scope = "month" | "all"
+
+function Check({ on }: { on: boolean }) {
+    return (
+        <svg viewBox="0 0 24 24" aria-hidden className={cn("size-5 text-primary transition-opacity duration-150", on ? "opacity-100" : "opacity-0")}>
+            <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    )
+}
 
 export function ExportSheet({ open, onOpenChange: setOpen }: { open: boolean; onOpenChange: (open: boolean) => void }) {
     const [scope, setScope] = useState<Scope>("month")
@@ -48,36 +50,39 @@ export function ExportSheet({ open, onOpenChange: setOpen }: { open: boolean; on
         }
     }
 
+    const choose = (value: Scope) => {
+        if (value !== scope) haptic()
+        setScope(value)
+    }
+
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogContent>
-                <DialogHeader>
-                    <span className="mx-auto mb-1 grid size-14 animate-pop place-items-center rounded-2xl bg-success/15 text-success">
-                        <FileSpreadsheet className="size-7" />
-                    </span>
-                    <DialogTitle>خروجی اکسل</DialogTitle>
-                    <DialogDescription>
-                        تراکنش‌ها، خلاصهٔ ماهانه و جمع هر دسته‌بندی در یک فایل
-                    </DialogDescription>
-                </DialogHeader>
+                <DialogNav title="خروجی اکسل" />
+                <DialogBody>
+                    <Group
+                        title="بازه"
+                        footer="فایل سه برگه دارد: تراکنش‌ها، خلاصهٔ ماهانه و جمع هر دسته‌بندی."
+                    >
+                        <Row
+                            onClick={() => choose("month")}
+                            title={formatMonthTitle(date)}
+                            subtitle={`${monthEntries.length.toLocaleString("fa-IR")} تراکنش`}
+                            trailing={<Check on={scope === "month"} />}
+                        />
+                        <Row
+                            onClick={() => choose("all")}
+                            title="همهٔ داده‌ها"
+                            subtitle={`${allEntries.length.toLocaleString("fa-IR")} تراکنش`}
+                            trailing={<Check on={scope === "all"} />}
+                        />
+                    </Group>
 
-                <SegmentedControl
-                    value={scope}
-                    onChange={setScope}
-                    options={[
-                        { value: "month", label: formatMonthTitle(date) },
-                        { value: "all", label: "همهٔ داده‌ها" },
-                    ]}
-                />
-
-                <p className="text-center text-sm text-muted-foreground">
-                    {entries.length.toLocaleString("fa-IR")} تراکنش
-                </p>
-
-                <Button size="lg" className="mb-2 w-full" disabled={isExporting || entries.length === 0} onClick={handleExport}>
-                    {isExporting ? <Loader2 className="animate-spin" /> : <FileSpreadsheet />}
-                    دانلود فایل اکسل
-                </Button>
+                    <Button size="lg" className="w-full" disabled={isExporting || entries.length === 0} onClick={handleExport}>
+                        {isExporting ? <Loader2 className="animate-spin" /> : <FileSpreadsheet />}
+                        دانلود فایل اکسل
+                    </Button>
+                </DialogBody>
             </DialogContent>
         </Dialog>
     )
@@ -87,13 +92,7 @@ export function ExportButton() {
     const [open, setOpen] = useState(false)
     return (
         <>
-            <Button
-                variant="tinted"
-                size="icon"
-                className="shrink-0 rounded-xl"
-                aria-label="خروجی اکسل"
-                onClick={() => setOpen(true)}
-            >
+            <Button variant="tinted" size="icon" aria-label="خروجی اکسل" onClick={() => setOpen(true)}>
                 <FileSpreadsheet />
             </Button>
             <ExportSheet open={open} onOpenChange={setOpen} />

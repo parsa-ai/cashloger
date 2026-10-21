@@ -5,31 +5,28 @@ import { Slot } from "radix-ui"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "pressable inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  "press inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap font-semibold outline-none disabled:pointer-events-none disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-primary/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-[18px]",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground shadow-sm shadow-primary/20 hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
-        outline:
-          "border bg-card hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        tinted: "bg-accent text-accent-foreground hover:bg-accent/80",
+        default: "bg-primary text-primary-foreground",
+        tinted: "bg-tint text-primary",
+        secondary: "bg-fill text-foreground",
+        destructive: "bg-destructive text-white",
+        "destructive-tinted": "bg-destructive/10 text-destructive",
+        // دکمهٔ متنی مثل دکمه‌های نوار ناوبری iOS
+        plain: "text-primary",
+        ghost: "text-foreground hover:bg-fill",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-10 px-4 py-2 has-[>svg]:px-3",
-        xs: "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 rounded-lg gap-1.5 px-3 has-[>svg]:px-2.5",
-        lg: "h-12 rounded-2xl px-6 text-base has-[>svg]:px-4",
-        icon: "size-10",
-        "icon-xs": "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8",
-        "icon-lg": "size-10",
+        default: "h-11 rounded-lg px-4 text-[15px]",
+        sm: "h-8 rounded-md px-3 text-[13px] [&_svg:not([class*='size-'])]:size-4",
+        lg: "h-12 rounded-xl px-5 text-base",
+        icon: "size-9 rounded-full",
+        "icon-sm": "size-8 rounded-full [&_svg:not([class*='size-'])]:size-4",
+        // دکمه‌های متنیِ نوار بالای شیت‌ها
+        nav: "h-9 px-1 text-[15px]",
       },
     },
     defaultVariants: {

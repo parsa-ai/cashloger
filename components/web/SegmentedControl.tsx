@@ -24,35 +24,39 @@ export function SegmentedControl<T extends string>({
     return (
         <div
             role="tablist"
-            className={cn("relative grid rounded-xl bg-muted p-1 text-sm", className)}
+            className={cn("relative grid h-9 rounded-lg bg-fill p-0.5 text-[13px]", className)}
             style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
         >
             <span
                 aria-hidden
-                className="absolute inset-y-1 right-1 rounded-[0.6rem] bg-card shadow-sm transition-transform duration-500 ease-ios dark:bg-secondary"
+                className="absolute inset-y-0.5 right-0.5 rounded-[8px] bg-card shadow-[0_1px_3px_oklch(0_0_0/0.12)] transition-transform duration-300 ease-ios dark:bg-fill-strong dark:shadow-none"
                 style={{
-                    width: `calc((100% - 0.5rem) / ${options.length})`,
+                    width: `calc((100% - 4px) / ${options.length})`,
                     transform: `translateX(${-index * 100}%)`,
                 }}
             />
-            {options.map((option) => (
-                <button
-                    key={option.value}
-                    type="button"
-                    role="tab"
-                    aria-selected={option.value === value}
-                    onClick={() => {
-                        if (option.value !== value) haptic()
-                        onChange(option.value)
-                    }}
-                    className={cn(
-                        "relative z-10 h-8 rounded-[0.6rem] px-2 font-medium transition-colors duration-300 active:opacity-60",
-                        option.value === value ? "text-foreground" : "text-muted-foreground"
-                    )}
-                >
-                    {option.label}
-                </button>
-            ))}
+            {options.map((option) => {
+                const selected = option.value === value
+                return (
+                    <button
+                        key={option.value}
+                        type="button"
+                        role="tab"
+                        aria-selected={selected}
+                        onClick={() => {
+                            if (selected) return
+                            haptic()
+                            onChange(option.value)
+                        }}
+                        className={cn(
+                            "relative truncate px-2 transition-[color,font-weight] duration-200",
+                            selected ? "font-semibold text-foreground" : "font-medium text-muted-foreground"
+                        )}
+                    >
+                        {option.label}
+                    </button>
+                )
+            })}
         </div>
     )
 }

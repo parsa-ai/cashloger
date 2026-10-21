@@ -5,93 +5,94 @@ import { cn } from "@/lib/utils"
 // لیست گروه‌بندی‌شده به سبک تنظیمات iOS
 export function Group({
     title,
+    action,
     footer,
     className,
     children,
 }: {
     title?: React.ReactNode
+    action?: React.ReactNode
     footer?: React.ReactNode
     className?: string
     children: React.ReactNode
 }) {
     return (
-        <section className={cn("space-y-1.5", className)}>
-            {title && <h2 className="px-4 text-[13px] font-medium text-muted-foreground">{title}</h2>}
-            <div className="overflow-hidden rounded-2xl bg-card divide-y divide-border/70">{children}</div>
-            {footer && <p className="px-4 text-xs leading-5 text-muted-foreground">{footer}</p>}
+        <section className={className}>
+            {(title || action) && (
+                <div className="mb-1.5 flex items-end justify-between px-4">
+                    <h2 className="text-[13px] text-muted-foreground">{title}</h2>
+                    {action}
+                </div>
+            )}
+            <div className="overflow-hidden rounded-xl bg-card">{children}</div>
+            {footer && <p className="mt-1.5 px-4 text-[13px] leading-5 text-muted-foreground">{footer}</p>}
         </section>
     )
 }
 
-interface GroupItemProps {
-    icon?: React.ReactNode
-    iconColor?: string
+// آیکون رنگی کوچک کنار ردیف‌های تنظیمات
+export function IconTile({ color, children }: { color: string; children: React.ReactNode }) {
+    return (
+        <span
+            className="grid size-[30px] shrink-0 place-items-center rounded-md text-white [&_svg]:size-[18px]"
+            style={{ backgroundColor: color }}
+        >
+            {children}
+        </span>
+    )
+}
+
+interface RowProps {
+    leading?: React.ReactNode
     title: React.ReactNode
     subtitle?: React.ReactNode
     trailing?: React.ReactNode
     href?: string
     onClick?: () => void
-    destructive?: boolean
     chevron?: boolean
+    tone?: "default" | "primary" | "destructive"
     className?: string
-    style?: React.CSSProperties
 }
 
-export function GroupItem({
-    icon,
-    iconColor,
-    title,
-    subtitle,
-    trailing,
-    href,
-    onClick,
-    destructive,
-    chevron,
-    className,
-    style,
-}: GroupItemProps) {
+// ردیف لیست؛ خط جداکننده از ستون متن شروع می‌شود (نه از لبهٔ کارت)
+export function Row({ leading, title, subtitle, trailing, href, onClick, chevron, tone = "default", className }: RowProps) {
     const content = (
         <>
-            {icon && (
-                <span
-                    className="grid size-8 shrink-0 place-items-center rounded-[0.6rem] text-white [&_svg]:size-[18px]"
-                    style={{ backgroundColor: iconColor ?? "var(--primary)" }}
-                >
-                    {icon}
+            {leading}
+            <span className="flex min-h-11 min-w-0 flex-1 items-center gap-3 border-b border-separator py-2 pe-4 group-last/row:border-b-0">
+                <span className="min-w-0 flex-1 text-right">
+                    <span
+                        className={cn(
+                            "block truncate text-[15px]",
+                            tone === "primary" && "text-primary",
+                            tone === "destructive" && "text-destructive"
+                        )}
+                    >
+                        {title}
+                    </span>
+                    {subtitle && <span className="block truncate text-[13px] text-muted-foreground">{subtitle}</span>}
                 </span>
-            )}
-            <span className="min-w-0 flex-1 text-right">
-                <span className={cn("block truncate", destructive && "text-destructive")}>{title}</span>
-                {subtitle && <span className="block truncate text-xs text-muted-foreground">{subtitle}</span>}
+                {trailing}
+                {(chevron ?? !!href) && <ChevronLeft className="size-[18px] shrink-0 text-muted-foreground/50" />}
             </span>
-            {trailing}
-            {(chevron ?? !!href) && <ChevronLeft className="size-4 shrink-0 text-muted-foreground/60" />}
         </>
     )
 
-    const classes = cn(
-        "flex min-h-12 w-full items-center gap-3 px-4 py-2.5 text-[15px] transition-colors",
-        (href || onClick) && "active:bg-muted",
-        className
-    )
+    const classes = cn("group/row flex w-full items-center gap-3 ps-4 text-right", (href || onClick) && "press-row", className)
 
     if (href) {
         return (
-            <Link href={href} className={classes} style={style}>
+            <Link href={href} className={classes}>
                 {content}
             </Link>
         )
     }
     if (onClick) {
         return (
-            <button type="button" onClick={onClick} className={classes} style={style}>
+            <button type="button" onClick={onClick} className={classes}>
                 {content}
             </button>
         )
     }
-    return (
-        <div className={classes} style={style}>
-            {content}
-        </div>
-    )
+    return <div className={classes}>{content}</div>
 }

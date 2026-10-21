@@ -1,14 +1,13 @@
 "use client"
 
-import { Check } from "lucide-react"
-import { PALETTE } from "@/lib/palette"
+import { PALETTE_ROWS } from "@/lib/palette"
 import { cn, haptic } from "@/lib/utils"
 
-// انتخاب رنگ از پالت ۶۴ رنگی (هر تن در دو ردیف ۸تایی)
+// انتخاب رنگ از پالت ۶۴ رنگی: هر تن دو ردیف ۸تایی، از روشن به تیره
 export function ColorPicker({ value, onChange }: { value: string; onChange: (color: string) => void }) {
     return (
-        <div role="radiogroup" aria-label="رنگ دسته‌بندی" className="grid grid-cols-8 gap-2" dir="ltr">
-            {PALETTE.map((color, i) => {
+        <div role="radiogroup" aria-label="رنگ دسته‌بندی" className="grid grid-cols-8 gap-x-2 gap-y-2.5 p-4" dir="ltr">
+            {PALETTE_ROWS.flat().map((color, i) => {
                 const selected = color === value
                 return (
                     <button
@@ -18,16 +17,28 @@ export function ColorPicker({ value, onChange }: { value: string; onChange: (col
                         aria-checked={selected}
                         aria-label={`رنگ ${i + 1}`}
                         onClick={() => {
-                            haptic()
+                            if (!selected) haptic()
                             onChange(color)
                         }}
-                        className={cn(
-                            "pressable grid aspect-square place-items-center rounded-full ring-offset-2 ring-offset-popover transition-[box-shadow,transform] duration-300",
-                            selected && "ring-2 ring-foreground/70"
-                        )}
+                        className="press relative grid aspect-square place-items-center rounded-full"
                         style={{ backgroundColor: color }}
                     >
-                        {selected && <Check className="size-4 animate-pop text-white drop-shadow" strokeWidth={3} />}
+                        {/* حلقهٔ انتخاب: فاصلهٔ هم‌رنگ کارت بین رنگ و حلقه */}
+                        <span
+                            aria-hidden
+                            className={cn(
+                                "absolute -inset-[3px] rounded-full border-2 transition-[opacity,transform] duration-200 ease-out",
+                                selected ? "scale-100 opacity-100" : "scale-90 opacity-0"
+                            )}
+                            style={{ borderColor: color }}
+                        />
+                        <span
+                            aria-hidden
+                            className={cn(
+                                "absolute inset-0 rounded-full border-[2.5px] border-card transition-opacity duration-200",
+                                selected ? "opacity-100" : "opacity-0"
+                            )}
+                        />
                     </button>
                 )
             })}

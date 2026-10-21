@@ -1,11 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { XIcon } from "lucide-react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 
 function Dialog({
   ...props
@@ -39,7 +37,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] duration-300",
+        "fixed inset-0 z-50 bg-black/35 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:duration-300 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:duration-200",
         className
       )}
       {...props}
@@ -47,40 +45,66 @@ function DialogOverlay({
   )
 }
 
+// روی موبایل شیت پایین صفحه، روی دسکتاپ پنجرهٔ وسط صفحه
 function DialogContent({
   className,
   children,
-  showCloseButton = true,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content> & {
-  showCloseButton?: boolean
-}) {
+}: React.ComponentProps<typeof DialogPrimitive.Content>) {
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
+        // کیبورد نباید وسط انیمیشن باز شدن شیت بالا بیاید
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        aria-describedby={undefined}
         className={cn(
-          "bg-popover fixed z-50 grid w-full gap-4 outline-none shadow-2xl",
-          "inset-x-0 bottom-0 max-h-[92dvh] overflow-y-auto no-scrollbar rounded-t-[1.75rem] px-5 pt-3 safe-bottom data-[state=open]:animate-sheet-in data-[state=closed]:animate-sheet-out",
-          "sm:inset-x-auto sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:p-6 sm:data-[state=open]:animate-in sm:data-[state=open]:fade-in-0 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:animate-out sm:data-[state=closed]:fade-out-0 sm:data-[state=closed]:zoom-out-95 sm:duration-300",
+          "fixed z-50 flex w-full flex-col bg-background outline-none",
+          "inset-x-0 bottom-0 max-h-[94dvh] rounded-t-2xl safe-bottom will-change-transform data-[state=open]:animate-sheet-in data-[state=closed]:animate-sheet-out",
+          "sm:inset-0 sm:m-auto sm:h-fit sm:max-h-[85dvh] sm:max-w-md sm:rounded-2xl sm:pb-4 sm:shadow-float sm:data-[state=open]:animate-in sm:data-[state=open]:fade-in-0 sm:data-[state=open]:zoom-in-[0.97] sm:data-[state=open]:duration-200 sm:data-[state=closed]:animate-out sm:data-[state=closed]:fade-out-0 sm:data-[state=closed]:zoom-out-[0.97] sm:data-[state=closed]:duration-150",
           className
         )}
         {...props}
       >
-        <div aria-hidden className="mx-auto mb-1 h-1.5 w-10 shrink-0 rounded-full bg-muted-foreground/25 sm:hidden" />
+        <div aria-hidden className="mx-auto mt-2 h-[5px] w-9 shrink-0 rounded-full bg-fill-strong sm:hidden" />
         {children}
-        {showCloseButton && (
-          <DialogPrimitive.Close
-            data-slot="dialog-close"
-            className="pressable bg-muted text-muted-foreground absolute top-4 left-4 grid size-8 place-items-center rounded-full hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
-          >
-            <XIcon />
-            <span className="sr-only">بستن</span>
-          </DialogPrimitive.Close>
-        )}
       </DialogPrimitive.Content>
     </DialogPortal>
+  )
+}
+
+// نوار بالای شیت به سبک iOS: دکمهٔ لغو، عنوان، دکمهٔ تأیید
+function DialogNav({
+  title,
+  cancelLabel = "انصراف",
+  action,
+  className,
+}: {
+  title: React.ReactNode
+  cancelLabel?: React.ReactNode
+  action?: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div className={cn("grid h-12 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 px-4", className)}>
+      <DialogPrimitive.Close className="press justify-self-start text-[15px] text-primary outline-none">
+        {cancelLabel}
+      </DialogPrimitive.Close>
+      <DialogPrimitive.Title className="truncate text-[17px] font-semibold">{title}</DialogPrimitive.Title>
+      <div className="justify-self-end">{action}</div>
+    </div>
+  )
+}
+
+// بدنهٔ قابل اسکرول شیت
+function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="dialog-body"
+      className={cn("no-scrollbar min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 pt-2 pb-4", className)}
+      {...props}
+    />
   )
 }
 
@@ -88,36 +112,9 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex flex-col gap-1.5 text-center", className)}
+      className={cn("flex flex-col items-center gap-1 text-center", className)}
       {...props}
     />
-  )
-}
-
-function DialogFooter({
-  className,
-  showCloseButton = false,
-  children,
-  ...props
-}: React.ComponentProps<"div"> & {
-  showCloseButton?: boolean
-}) {
-  return (
-    <div
-      data-slot="dialog-footer"
-      className={cn(
-        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
-        className
-      )}
-      {...props}
-    >
-      {children}
-      {showCloseButton && (
-        <DialogPrimitive.Close asChild>
-          <Button variant="outline">Close</Button>
-        </DialogPrimitive.Close>
-      )}
-    </div>
   )
 }
 
@@ -128,7 +125,7 @@ function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("text-lg leading-tight font-bold", className)}
+      className={cn("text-[17px] font-semibold", className)}
       {...props}
     />
   )
@@ -141,7 +138,7 @@ function DialogDescription({
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn("text-[13px] text-muted-foreground", className)}
       {...props}
     />
   )
@@ -149,11 +146,12 @@ function DialogDescription({
 
 export {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
+  DialogNav,
   DialogOverlay,
   DialogPortal,
   DialogTitle,

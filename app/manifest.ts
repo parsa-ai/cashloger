@@ -9,8 +9,8 @@ export default function manifest(): MetadataRoute.Manifest {
     dir: 'rtl',
     start_url: '/',
     display: 'standalone',
-    background_color: '#f3f4f8',
-    theme_color: '#f3f4f8',
+    background_color: '#f2f4f6',
+    theme_color: '#f2f4f6',
     icons: [
       {
         src: '/web-app-manifest-192x192.png',

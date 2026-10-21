@@ -1,25 +1,21 @@
 "use client"
 
 import { SubmitEvent, useMemo, useState } from "react"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
+import { Dialog, DialogBody, DialogContent, DialogNav } from "@/components/ui/dialog"
+import { CategoryAvatar } from "@/components/web/Avatars"
 import { ColorPicker } from "@/components/web/ColorPicker"
-import { Group } from "@/components/web/Group"
+import { Group, Row } from "@/components/web/Group"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { suggestColor } from "@/lib/palette"
 import { Category, LogKind } from "@/lib/types"
-import { cn, haptic } from "@/lib/utils"
+import { haptic } from "@/lib/utils"
 import { useLogStore } from "@/store/useChartStore"
 import { toast } from "@/store/useToastStore"
+
+const FORM_ID = "category-form"
 
 interface CategoryFormProps {
     kind: LogKind
@@ -42,17 +38,24 @@ function CategoryForm({ kind, category, onDone }: CategoryFormProps) {
     const [error, setError] = useState<string | null>(null)
 
     const usedCount = category ? entries.filter((e) => e.key === category.id).length : 0
+    const trimmed = label.trim()
+    const unchanged = category && trimmed === category.label && color === category.color
 
     const handleSubmit = (e: SubmitEvent) => {
         e.preventDefault()
-        if (!label.trim()) return
+        if (!trimmed) return
+        if (unchanged) {
+            onDone()
+            return
+        }
         try {
-            if (category) updateCategory(category.id, { label, color })
-            else addCategory(kind, label, color)
+            if (category) updateCategory(category.id, { label: trimmed, color })
+            else addCategory(kind, trimmed, color)
             haptic([10, 40, 10])
             toast(category ? "دسته‌بندی ویرایش شد" : "دسته‌بندی اضافه شد", "success")
             onDone()
         } catch (err) {
+            haptic([30, 40, 30])
             setError(err instanceof Error ? err.message : "خطا در ذخیره")
         }
     }
@@ -70,58 +73,61 @@ function CategoryForm({ kind, category, onDone }: CategoryFormProps) {
     }
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-5">
-            <DialogHeader>
-                <span
-                    className="mx-auto mb-1 grid size-16 place-items-center rounded-full text-2xl font-bold text-white shadow-lg transition-colors duration-500"
-                    style={{ backgroundColor: color }}
-                >
-                    {label.trim().charAt(0) || "؟"}
-                </span>
-                <DialogTitle>{category ? "ویرایش دسته‌بندی" : "دسته‌بندی جدید"}</DialogTitle>
-                <DialogDescription>{kind === "cost" ? "برای هزینه‌ها" : "برای درآمدها"}</DialogDescription>
-            </DialogHeader>
-
-            <Input
-                autoFocus={!category}
-                value={label}
-                onChange={(e) => {
-                    setLabel(e.target.value)
-                    setError(null)
-                }}
-                placeholder="نام دسته‌بندی"
-                maxLength={40}
-                aria-invalid={!!error}
-            />
-            {error && <p className="-mt-3 animate-item-in px-1 text-sm text-destructive">{error}</p>}
-
-            <ColorPicker value={color} onChange={setColor} />
-
-            {confirmDelete && usedCount > 0 && (
-                <p className="animate-item-in rounded-2xl bg-destructive/10 p-3 text-sm text-destructive">
-                    این دسته در {usedCount.toLocaleString("fa-IR")} تراکنش استفاده شده. بعد از حذف، آن تراکنش‌ها بدون دسته‌بندی می‌شوند.
-                </p>
-            )}
-
-            <div className="flex gap-2 pb-2">
-                {category && (
-                    <Button
-                        type="button"
-                        variant={confirmDelete ? "destructive" : "secondary"}
-                        size="lg"
-                        onClick={handleDelete}
-                        className={cn("transition-all duration-300", confirmDelete ? "flex-1" : "w-12 px-0")}
-                        aria-label="حذف"
-                    >
-                        <Trash2 />
-                        {confirmDelete && <span className="animate-item-in">حذف کن</span>}
+        <>
+            <DialogNav
+                title={category ? "ویرایش دسته‌بندی" : "دسته‌بندی جدید"}
+                action={
+                    <Button type="submit" form={FORM_ID} variant="plain" size="nav" disabled={!trimmed}>
+                        {category ? "ذخیره" : "افزودن"}
                     </Button>
-                )}
-                <Button type="submit" size="lg" className="flex-1" disabled={!label.trim()}>
-                    {category ? "ذخیره" : "افزودن"}
-                </Button>
-            </div>
-        </form>
+                }
+            />
+            <DialogBody>
+                <form id={FORM_ID} onSubmit={handleSubmit} className="space-y-6">
+                    <div className="flex flex-col items-center gap-2 pt-2">
+                        <CategoryAvatar label={trimmed || "؟"} color={color} size={88} animate />
+                        <p className="text-[13px] text-muted-foreground">{kind === "cost" ? "دستهٔ هزینه" : "دستهٔ درآمد"}</p>
+                    </div>
+
+                    <Group footer={error ? <span className="text-destructive">{error}</span> : undefined}>
+                        <input
+                            value={label}
+                            onChange={(e) => {
+                                setLabel(e.target.value)
+                                setError(null)
+                            }}
+                            placeholder="نام دسته‌بندی"
+                            maxLength={40}
+                            enterKeyHint="done"
+                            aria-invalid={!!error}
+                            className="h-11 w-full bg-transparent px-4 text-[15px] outline-none placeholder:text-muted-foreground/70"
+                        />
+                    </Group>
+
+                    <Group title="رنگ">
+                        <ColorPicker value={color} onChange={setColor} />
+                    </Group>
+
+                    {category && (
+                        <Group
+                            footer={
+                                confirmDelete
+                                    ? usedCount > 0
+                                        ? `این دسته در ${usedCount.toLocaleString("fa-IR")} تراکنش استفاده شده؛ آن تراکنش‌ها بدون دسته‌بندی می‌شوند. برای حذف دوباره بزن.`
+                                        : "برای حذف دوباره بزن."
+                                    : undefined
+                            }
+                        >
+                            <Row
+                                onClick={handleDelete}
+                                tone="destructive"
+                                title={<span className="block text-center font-medium">{confirmDelete ? "مطمئنم، حذف شود" : "حذف دسته‌بندی"}</span>}
+                            />
+                        </Group>
+                    )}
+                </form>
+            </DialogBody>
+        </>
     )
 }
 
@@ -136,6 +142,12 @@ export function CategoryManager() {
     const entries = useLogStore((s) => s.entries)
     const categories = useMemo(() => allCategories.filter((c) => c.kind === kind), [allCategories, kind])
 
+    const counts = useMemo(() => {
+        const map = new Map<string, number>()
+        for (const e of entries) if (e.key) map.set(e.key, (map.get(e.key) ?? 0) + 1)
+        return map
+    }, [entries])
+
     const openForm = (category?: Category) => {
         haptic()
         setEditing(category)
@@ -144,7 +156,7 @@ export function CategoryManager() {
     }
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-6">
             <SegmentedControl
                 value={kind}
                 onChange={setKind}
@@ -155,45 +167,36 @@ export function CategoryManager() {
             />
 
             {isLoading ? (
-                <div className="h-64 animate-pulse rounded-2xl bg-muted" />
+                <div className="h-64 animate-pulse rounded-xl bg-card" />
             ) : (
-                <Group
-                    key={kind}
-                    footer="با لمس هر دسته می‌تونی اسم و رنگش رو عوض کنی یا حذفش کنی."
-                >
-                    {categories.map((category, i) => {
-                        const count = entries.filter((e) => e.key === category.id).length
+                <Group footer="روی هر دسته بزن تا اسم یا رنگش رو عوض کنی یا حذفش کنی.">
+                    {categories.map((category) => {
+                        const count = counts.get(category.id) ?? 0
                         return (
-                            <button
+                            <Row
                                 key={category.id}
-                                type="button"
                                 onClick={() => openForm(category)}
-                                className="stagger flex min-h-14 w-full animate-item-in items-center gap-3 px-4 py-2.5 text-right transition-colors active:bg-muted"
-                                style={{ "--i": i } as React.CSSProperties}
-                            >
-                                <span
-                                    className="grid size-9 shrink-0 place-items-center rounded-full font-bold text-white transition-colors duration-500"
-                                    style={{ backgroundColor: category.color }}
-                                >
-                                    {category.label.charAt(0)}
-                                </span>
-                                <span className="flex-1 truncate font-medium">{category.label}</span>
-                                <span className="text-xs text-muted-foreground tabular-nums">
-                                    {count > 0 ? `${count.toLocaleString("fa-IR")} تراکنش` : ""}
-                                </span>
-                            </button>
+                                leading={<CategoryAvatar label={category.label} color={category.color} size={36} />}
+                                title={category.label}
+                                trailing={
+                                    count > 0 && (
+                                        <span className="num text-[13px] text-muted-foreground">{count.toLocaleString("fa-IR")}</span>
+                                    )
+                                }
+                                chevron
+                            />
                         )
                     })}
-                    <button
-                        type="button"
+                    <Row
                         onClick={() => openForm()}
-                        className="flex min-h-14 w-full items-center gap-3 px-4 text-right font-medium text-primary transition-colors active:bg-muted"
-                    >
-                        <span className="grid size-9 place-items-center rounded-full bg-accent">
-                            <Plus className="size-5" />
-                        </span>
-                        دسته‌بندی جدید
-                    </button>
+                        leading={
+                            <span className="grid size-9 place-items-center rounded-full bg-tint text-primary">
+                                <Plus className="size-5" />
+                            </span>
+                        }
+                        title="دسته‌بندی جدید"
+                        tone="primary"
+                    />
                 </Group>
             )}
 

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { useTheme } from "next-themes"
-import { Check } from "lucide-react"
 
 import { Group } from "@/components/web/Group"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
@@ -55,7 +54,7 @@ export function ThemeSettings() {
                         { value: "system", label: "خودکار" },
                     ]}
                 />
-                <div className="grid grid-cols-6 gap-2">
+                <div className="grid grid-cols-6">
                     {COLOR_THEMES.map((t) => {
                         const selected = t.id === colorTheme
                         return (
@@ -63,22 +62,30 @@ export function ThemeSettings() {
                                 key={t.id}
                                 type="button"
                                 onClick={() => {
-                                    haptic()
+                                    if (!selected) haptic()
                                     setColorTheme(t.id)
                                 }}
                                 aria-pressed={selected}
-                                className="pressable flex flex-col items-center gap-1.5"
+                                className="press flex flex-col items-center gap-1.5"
                             >
-                                <span
-                                    className={cn(
-                                        "grid size-10 place-items-center rounded-full ring-offset-2 ring-offset-card transition-shadow duration-300",
-                                        selected && "ring-2 ring-foreground/60"
-                                    )}
-                                    style={{ backgroundColor: t.swatch }}
-                                >
-                                    {selected && <Check className="size-4 animate-pop text-white" strokeWidth={3} />}
+                                <span className="relative grid size-9 place-items-center rounded-full" style={{ backgroundColor: t.swatch }}>
+                                    <span
+                                        aria-hidden
+                                        className={cn(
+                                            "absolute -inset-[3px] rounded-full border-2 transition-[opacity,transform] duration-200 ease-out",
+                                            selected ? "scale-100 opacity-100" : "scale-90 opacity-0"
+                                        )}
+                                        style={{ borderColor: t.swatch }}
+                                    />
+                                    <span
+                                        aria-hidden
+                                        className={cn(
+                                            "absolute inset-0 rounded-full border-[2.5px] border-card transition-opacity duration-200",
+                                            selected ? "opacity-100" : "opacity-0"
+                                        )}
+                                    />
                                 </span>
-                                <span className={cn("text-[11px]", selected ? "font-semibold" : "text-muted-foreground")}>
+                                <span className={cn("text-[11px] transition-colors", selected ? "font-semibold text-foreground" : "text-muted-foreground")}>
                                     {t.label}
                                 </span>
                             </button>
