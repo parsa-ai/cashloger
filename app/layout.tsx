@@ -7,6 +7,7 @@ import DataLoader from "@/components/web/DataLoader";
 import { AppHeader } from "@/components/web/AppHeader";
 import { InstallPrompt } from "@/components/web/InstallPrompt";
 import { TransactionSheetHost } from "@/components/web/TransactionSheet";
+import { SwipeNav } from "@/components/web/SwipeNav";
 import { TabBar } from "@/components/web/TabBar";
 import { Toaster } from "@/components/web/Toaster";
 import { createClient } from "@/lib/supabase/server";
@@ -74,8 +75,8 @@ export default async function RootLayout({
             {user ? (
               <div className="flex min-h-dvh flex-col">
                 <AppHeader userName={userName} />
-                <main className="mx-auto w-full max-w-2xl flex-1 px-4 pt-2 pb-[calc(max(env(safe-area-inset-bottom),0.5rem)+140px)]">
-                  {children}
+                <main className="mx-auto w-full max-w-2xl flex-1 overflow-x-clip px-4 pt-[calc(env(safe-area-inset-top)+68px)] pb-[calc(max(env(safe-area-inset-bottom),12px)+96px)]">
+                  <SwipeNav>{children}</SwipeNav>
                 </main>
                 <TabBar />
                 <TransactionSheetHost />

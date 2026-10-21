@@ -34,6 +34,8 @@
   --color-fill-strong: var(--fill-strong);
   --color-tint: var(--tint);
   --color-separator: var(--separator);
+  --color-segment: var(--segment);
+  --color-segment-thumb: var(--segment-thumb);
 
   /* شعاع‌ها: کنترل‌ها lg، کارت‌ها و گروه‌ها xl، شیت‌ها 2xl */
   --radius-sm: 6px;
@@ -49,6 +51,9 @@
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
   --animate-page-in: fade-in 180ms ease-out both;
+  /* جابه‌جایی بین تب‌ها؛ در راست‌به‌چپ تب بعدی سمت چپ است */
+  --animate-slide-next: slide-next 320ms var(--ease-ios) both;
+  --animate-slide-prev: slide-prev 320ms var(--ease-ios) both;
   --animate-fade-in: fade-in 200ms ease-out both;
   --animate-rise-in: rise-in 260ms var(--ease-out) both;
   --animate-pop: pop 220ms var(--ease-out) both;
@@ -78,12 +83,20 @@
     to { transform: translate3d(0, 100%, 0); }
   }
   @keyframes toast-in {
-    from { opacity: 0; transform: translate3d(0, -12px, 0) scale(0.96); }
+    from { opacity: 0; transform: translate3d(0, 16px, 0) scale(0.96); }
     to { opacity: 1; transform: none; }
   }
   @keyframes toast-out {
     from { opacity: 1; transform: none; }
-    to { opacity: 0; transform: translate3d(0, -8px, 0) scale(0.96); }
+    to { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.96); }
+  }
+  @keyframes slide-next {
+    from { opacity: 0; transform: translate3d(-32px, 0, 0); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes slide-prev {
+    from { opacity: 0; transform: translate3d(32px, 0, 0); }
+    to { opacity: 1; transform: none; }
   }
 }
 
@@ -103,6 +116,8 @@
   --separator: oklch(0.3 0.01 var(--th) / 0.13);
   --fill: oklch(0.5 0.01 var(--th) / 0.08);
   --fill-strong: oklch(0.5 0.01 var(--th) / 0.14);
+  --segment: oklch(0.45 0.01 var(--th) / 0.12);
+  --segment-thumb: oklch(1 0 0);
 
   --primary: oklch(var(--pl) var(--tc) var(--th));
   --primary-foreground: oklch(1 0 0);
@@ -110,6 +125,12 @@
 
   --destructive: oklch(0.6 0.21 25);
   --success: oklch(0.6 0.15 150);
+
+  /* شیشه به سبک اپل: پس‌زمینهٔ نیمه‌شفاف، لبهٔ روشن بالا، حاشیهٔ خیلی نازک */
+  --glass: oklch(0.995 0.002 var(--th) / 0.68);
+  --glass-highlight: oklch(1 0 0 / 0.9);
+  --glass-edge: oklch(0.2 0.01 var(--th) / 0.08);
+  --glass-shadow: 0 6px 24px -6px oklch(0.2 0.02 var(--th) / 0.16);
 }
 
 .dark {
@@ -122,12 +143,19 @@
   --separator: oklch(1 0 0 / 0.1);
   --fill: oklch(1 0 0 / 0.08);
   --fill-strong: oklch(1 0 0 / 0.14);
+  --segment: oklch(1 0 0 / 0.1);
+  --segment-thumb: oklch(0.44 0.008 var(--th));
 
   --primary-foreground: oklch(0.15 0.01 var(--th));
   --tint: oklch(var(--pl) var(--tc) var(--th) / 0.16);
 
   --destructive: oklch(0.68 0.19 25);
   --success: oklch(0.72 0.16 150);
+
+  --glass: oklch(0.27 0.008 var(--th) / 0.62);
+  --glass-highlight: oklch(1 0 0 / 0.14);
+  --glass-edge: oklch(1 0 0 / 0.08);
+  --glass-shadow: 0 8px 28px -6px oklch(0 0 0 / 0.5);
 }
 
 [data-color="graphite"] { --tc: 0; --pl: 0.25; }
@@ -144,27 +172,50 @@
     @apply border-separator outline-primary/40;
   }
 
+  /* حس برنامه: بدون کشیدگی صفحه، بدون انتخاب متن، بدون زوم با دوبار لمس */
+  html,
+  body {
+    overscroll-behavior: none;
+  }
+
   html {
     -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "ss01";
-    overscroll-behavior-y: none;
-  }
-
-  button, a, [role="button"] {
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
+  }
+
+  input,
+  textarea,
+  [contenteditable] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  img,
+  svg {
+    -webkit-user-drag: none;
   }
 
   /* اعداد هم‌عرض تا مبلغ‌ها موقع تغییر نلرزند */
   .num {
     font-variant-numeric: tabular-nums;
   }
+}
+
+/* شیشهٔ مات به سبک اپل برای هدر و نوار تب شناور */
+@utility glass {
+  background-color: var(--glass);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: inset 0 1px 0 0 var(--glass-highlight), 0 0 0 0.5px var(--glass-edge), var(--glass-shadow);
 }
 
 /* لمس دکمه‌ها: کم‌رنگ شدن کوتاه، مثل iOS */

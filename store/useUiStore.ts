@@ -11,7 +11,8 @@ interface UiStore {
     sheetKey: number
 
     setAddKind: (kind: LogKind) => void
-    openAdd: () => void
+    // نوع داده‌شده، نوع پیش‌فرض بعدی هم می‌شود
+    openAdd: (kind?: LogKind) => void
     openEdit: (entry: LogEntry) => void
     setSheetOpen: (open: boolean) => void
 }
@@ -23,7 +24,8 @@ export const useUiStore = create<UiStore>((set, get) => ({
     sheetKey: 0,
 
     setAddKind: (addKind) => set({ addKind }),
-    openAdd: () => set({ sheetOpen: true, editing: null, sheetKey: get().sheetKey + 1 }),
+    openAdd: (kind) =>
+        set({ sheetOpen: true, editing: null, sheetKey: get().sheetKey + 1, addKind: kind ?? get().addKind }),
     openEdit: (entry) => set({ sheetOpen: true, editing: entry, sheetKey: get().sheetKey + 1 }),
     // موقع بستن، editing می‌ماند تا محتوای شیت تا آخر انیمیشن خروج عوض نشود
     setSheetOpen: (sheetOpen) => set({ sheetOpen }),

@@ -14,8 +14,18 @@ and motion that is fast and quiet. Tokens live in `app/globals.css`; shared piec
 | `bg-tint` + `text-primary` | Tinted buttons and selected chips |
 | `border-separator` | Hairline separators inside groups, inset to the text column |
 
-Shadows: only `shadow-float`, and only on things that float above content (toast, FAB, popover).
-Gradients: none.
+Shadows: only `shadow-float` and the soft shadow built into `glass`, and only on things that float above content.
+Gradients: none, except the fade under the status bar that keeps scrolled content readable.
+
+## Chrome (floating glass)
+
+The header and tab bar float above the page as `glass` capsules (translucent, blurred, with a light top
+edge), 16px in from the screen sides and clear of the safe areas, like Telegram on iOS.
+
+- Header: round avatar or back button, title capsule (with the Telegram-style sync line), round sync button.
+- Tab bar: full-round capsule whose selection pill can be dragged; the `+` button is its own round button
+  beside it. Swiping the page sideways also changes tab.
+- Toasts are glass pills above the tab bar; destructive or quick actions offer "برگرداندن" (undo) there.
 
 ## Shape and spacing
 
@@ -59,7 +69,8 @@ expression.
 
 | Name | Duration | Use |
 | --- | --- | --- |
-| `animate-page-in` | 180ms fade | Route change (opacity only — never transform the page) |
+| `animate-slide-next` / `prev` | 320ms | Moving between tabs, from the side the new tab sits on |
+| `animate-page-in` | 180ms fade | First load |
 | `animate-rise-in` | 260ms | Content appearing for the first time |
 | `animate-sheet-in` / `out` | 420 / 240ms | Bottom sheets (`--ease-ios`) |
 | `animate-toast-in` / `out` | 320 / 180ms | Toasts |

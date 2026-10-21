@@ -6,6 +6,7 @@ import { sad } from "blobatar/expression"
 import { ExportButton } from "@/components/web/ExportSheet"
 import { EmptyState } from "@/components/web/EmptyState"
 import { Group } from "@/components/web/Group"
+import { MonthBar } from "@/components/web/MonthBar"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { TransactionRow } from "@/components/web/TransactionRow"
 import { LogEntry } from "@/lib/types"
@@ -40,10 +41,10 @@ export function TransactionList() {
     }, [entries, filter])
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center gap-3">
+        <div className="space-y-4">
+            <MonthBar trailing={<ExportButton />} />
+            <div>
                 <SegmentedControl
-                    className="flex-1"
                     value={filter}
                     onChange={(value) => {
                         setFilter(value)
@@ -55,7 +56,6 @@ export function TransactionList() {
                         { value: "income", label: "درآمد" },
                     ]}
                 />
-                <ExportButton />
             </div>
 
             {isLoading && <div className="h-64 animate-pulse rounded-xl bg-card" />}
@@ -64,28 +64,30 @@ export function TransactionList() {
                 <EmptyState expression={sad} title="تراکنشی برای این ماه نیست" description="با دکمهٔ + یکی ثبت کن." />
             )}
 
-            {days.map((dayEntries) => {
-                const dayTotal = dayEntries.reduce(
-                    (sum, e) => sum + (e.mode === "increase" ? e.visitors : -e.visitors),
-                    0
-                )
-                return (
-                    <Group
-                        key={dayEntries[0].date.toDateString()}
-                        title={formatDayTitle(dayEntries[0].date)}
-                        action={
-                            <span className="num text-[13px] text-muted-foreground">
-                                {dayTotal > 0 ? "+" : dayTotal < 0 ? "−" : ""}
-                                {formatMoney(Math.abs(dayTotal))}
-                            </span>
-                        }
-                    >
-                        {dayEntries.map((entry) => (
-                            <TransactionRow key={entry.id} entry={entry} category={categories.find((c) => c.id === entry.key)} />
-                        ))}
-                    </Group>
-                )
-            })}
+            <div className="space-y-6 pt-2">
+                {days.map((dayEntries) => {
+                    const dayTotal = dayEntries.reduce(
+                        (sum, e) => sum + (e.mode === "increase" ? e.visitors : -e.visitors),
+                        0
+                    )
+                    return (
+                        <Group
+                            key={dayEntries[0].date.toDateString()}
+                            title={formatDayTitle(dayEntries[0].date)}
+                            action={
+                                <span className="num text-[13px] text-muted-foreground">
+                                    {dayTotal > 0 ? "+" : dayTotal < 0 ? "−" : ""}
+                                    {formatMoney(Math.abs(dayTotal))}
+                                </span>
+                            }
+                        >
+                            {dayEntries.map((entry) => (
+                                <TransactionRow key={entry.id} entry={entry} category={categories.find((c) => c.id === entry.key)} />
+                            ))}
+                        </Group>
+                    )
+                })}
+            </div>
         </div>
     )
 }

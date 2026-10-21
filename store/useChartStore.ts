@@ -36,7 +36,8 @@ interface LogStore {
   // signOut: داده‌های محلی این کاربر هم پاک شود
   reset: (clearLocal?: boolean) => void;
 
-  addLog: (entry: Omit<LogEntry, "id">) => void;
+  // شناسهٔ تراکنش جدید را برمی‌گرداند (برای «برگرداندن»)
+  addLog: (entry: Omit<LogEntry, "id">) => string;
   updateLog: (entry: LogEntry) => void;
   removeLog: (id: string) => void;
 
@@ -188,6 +189,7 @@ export const useLogStore = create<LogStore>()((set, get) => {
     addLog: (entry) => {
       const id = crypto.randomUUID();
       commit({ opId: newOpId(), type: "tx.upsert", row: entryToRow({ ...entry, id }) });
+      return id;
     },
 
     updateLog: (entry) => {

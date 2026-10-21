@@ -3,14 +3,15 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronRight, CloudCheck, CloudOff, Loader2 } from "lucide-react"
 
 import { UserBlob } from "@/components/web/Avatars"
-import { cn, formatMonthTitle, haptic, isSamePersianMonth, shiftPersianMonth } from "@/lib/utils"
+import { cn, haptic } from "@/lib/utils"
 import { useLogStore } from "@/store/useChartStore"
-import useDateStore from "@/store/useYearStore"
 
 const TITLES: Record<string, string> = {
+    "/": "کش لاگر",
+    "/logs": "تراکنش‌ها",
     "/user": "تنظیمات",
     "/categories": "دسته‌بندی‌ها",
 }
@@ -22,119 +23,71 @@ function useSyncStatus() {
     const [slow, setSlow] = useState(false)
 
     useEffect(() => {
-        if (pending === 0) {
-            const reset = setTimeout(() => setSlow(false), 0)
-            return () => clearTimeout(reset)
-        }
-        const timer = setTimeout(() => setSlow(true), 1500)
+        const timer = setTimeout(() => setSlow(pending > 0), pending > 0 ? 1500 : 0)
         return () => clearTimeout(timer)
     }, [pending])
 
-    if (!isOnline) return pending > 0 ? `آفلاین · ${pending.toLocaleString("fa-IR")} تغییر در صف` : "در انتظار شبکه…"
-    if (pending > 0 && slow) return "در حال ارسال…"
-    return null
-}
-
-function MonthSwitcher() {
-    const date = useDateStore((s) => s.date) || new Date()
-    const setDate = useDateStore((s) => s.setDate)
-    const isCurrent = isSamePersianMonth(date, new Date())
-
-    const go = (months: number) => {
-        haptic()
-        setDate(shiftPersianMonth(date, months))
+    const sending = isOnline && pending > 0 && slow
+    if (!isOnline) {
+        return { sending, text: pending > 0 ? `آفلاین · ${pending.toLocaleString("fa-IR")} تغییر در صف` : "در انتظار شبکه…" }
     }
-
-    return (
-        <div className="flex items-center gap-1">
-            <button type="button" onClick={() => go(-1)} aria-label="ماه قبل" className="press grid size-8 place-items-center text-primary">
-                <ChevronRight className="size-5" />
-            </button>
-            <span key={date.toDateString()} className="min-w-24 animate-fade-in text-center text-[17px] font-semibold">
-                {formatMonthTitle(date)}
-            </span>
-            <button
-                type="button"
-                onClick={() => go(1)}
-                disabled={isCurrent}
-                aria-label="ماه بعد"
-                className="press grid size-8 place-items-center text-primary transition-opacity disabled:opacity-25"
-            >
-                <ChevronLeft className="size-5" />
-            </button>
-        </div>
-    )
+    return { sending, text: sending ? "در حال ارسال…" : null }
 }
 
+const circle = "glass pointer-events-auto grid size-11 place-items-center rounded-full press"
+
+// هدر شناور شیشه‌ای: دکمهٔ گرد، عنوان کپسولی، دکمهٔ گرد
 export function AppHeader({ userName }: { userName: string }) {
     const pathname = usePathname()
-    const status = useSyncStatus()
-    const [scrolled, setScrolled] = useState(false)
-
-    const date = useDateStore((s) => s.date) || new Date()
-    const setDate = useDateStore((s) => s.setDate)
-    const showMonth = pathname === "/" || pathname === "/logs"
-    const isCurrentMonth = isSamePersianMonth(date, new Date())
-
-    // خط زیر هدر فقط وقتی محتوا زیرش اسکرول شده، مثل iOS
-    useEffect(() => {
-        const onScroll = () => setScrolled(window.scrollY > 4)
-        onScroll()
-        window.addEventListener("scroll", onScroll, { passive: true })
-        return () => window.removeEventListener("scroll", onScroll)
-    }, [])
+    const { text: status, sending } = useSyncStatus()
+    const isOnline = useLogStore((s) => s.isOnline)
+    const sync = useLogStore((s) => s.sync)
 
     return (
-        <header
-            className={cn(
-                "safe-top sticky top-0 z-40 border-b bg-background/85 backdrop-blur-xl backdrop-saturate-150 transition-colors duration-200",
-                scrolled ? "border-separator" : "border-transparent"
-            )}
-        >
-            <div className="mx-auto grid h-12 max-w-2xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-4">
-                <div className="justify-self-start">
+        <>
+            {/* محو شدن محتوا زیر نوار وضعیت گوشی */}
+            <div
+                aria-hidden
+                className="pointer-events-none fixed inset-x-0 top-0 z-30 h-[calc(env(safe-area-inset-top)+72px)] bg-gradient-to-b from-background via-background/70 to-transparent"
+            />
+            <header className="pointer-events-none fixed inset-x-0 top-0 z-40 pt-[calc(env(safe-area-inset-top)+8px)]">
+                <div className="mx-auto grid max-w-2xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4">
                     {pathname === "/categories" ? (
-                        <Link href="/user" className="press flex items-center text-[15px] text-primary">
-                            <ChevronRight className="size-6 -ms-1.5" />
-                            تنظیمات
+                        <Link href="/user" aria-label="بازگشت به تنظیمات" className={cn(circle, "text-primary")}>
+                            <ChevronRight className="size-6" />
                         </Link>
                     ) : (
-                        <Link href="/user" aria-label="تنظیمات" className="press block">
-                            <UserBlob name={userName} size={32} />
+                        <Link href="/user" aria-label="تنظیمات" className={cn(circle, "p-1")}>
+                            <UserBlob name={userName} size={36} />
                         </Link>
                     )}
-                </div>
 
-                <div className="flex flex-col items-center leading-tight">
-                    {showMonth ? (
-                        <MonthSwitcher />
-                    ) : (
-                        <h1 key={pathname} className="animate-fade-in text-[17px] font-semibold">
+                    <div className="glass pointer-events-auto flex h-11 min-w-0 flex-col items-center justify-center justify-self-center rounded-full px-5 leading-tight">
+                        <h1 key={pathname} className="animate-fade-in truncate text-[16px] font-bold">
                             {TITLES[pathname] ?? "کش لاگر"}
                         </h1>
-                    )}
-                    {status && <p className="animate-fade-in text-[11px] text-muted-foreground">{status}</p>}
-                </div>
+                        {status && <p className="animate-fade-in truncate text-[11px] text-muted-foreground">{status}</p>}
+                    </div>
 
-                <div className="justify-self-end">
-                    {showMonth && (
-                        <button
-                            type="button"
-                            onClick={() => {
-                                haptic()
-                                setDate(new Date())
-                            }}
-                            className={cn(
-                                "press text-[15px] text-primary transition-opacity duration-200",
-                                isCurrentMonth && "pointer-events-none opacity-0"
-                            )}
-                            tabIndex={isCurrentMonth ? -1 : 0}
-                        >
-                            امروز
-                        </button>
-                    )}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            haptic()
+                            sync()
+                        }}
+                        aria-label={isOnline ? "همگام‌سازی" : "آفلاین"}
+                        className={cn(circle, isOnline ? "text-primary" : "text-muted-foreground")}
+                    >
+                        {sending ? (
+                            <Loader2 className="size-5 animate-spin" />
+                        ) : isOnline ? (
+                            <CloudCheck className="size-5" />
+                        ) : (
+                            <CloudOff className="size-5" />
+                        )}
+                    </button>
                 </div>
-            </div>
-        </header>
+            </header>
+        </>
     )
 }

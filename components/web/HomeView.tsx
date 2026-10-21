@@ -2,24 +2,35 @@
 
 import { useMemo } from "react"
 import Link from "next/link"
-import { ArrowDown, ArrowUp } from "lucide-react"
+import { ArrowDown, ArrowUp, Plus } from "lucide-react"
 
 import { AnimatedNumber } from "@/components/web/AnimatedNumber"
 import { buildChartItems, SpendingChart } from "@/components/web/Chart"
 import { Group } from "@/components/web/Group"
+import { MonthBar } from "@/components/web/MonthBar"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { TransactionRow } from "@/components/web/TransactionRow"
 import { LogKind } from "@/lib/types"
-import { cn } from "@/lib/utils"
+import { cn, haptic } from "@/lib/utils"
 import { useMonthEntries } from "@/store/selectors"
 import { useLogStore } from "@/store/useChartStore"
 import { useUiStore } from "@/store/useUiStore"
 import useDateStore from "@/store/useYearStore"
 
+// آمار درآمد/هزینه؛ لمسش مستقیم شیت ثبت همان نوع را باز می‌کند
 function Stat({ label, value, kind }: { label: string; value: number; kind: LogKind }) {
+    const openAdd = useUiStore((s) => s.openAdd)
     const Icon = kind === "income" ? ArrowDown : ArrowUp
     return (
-        <div className="flex min-w-0 items-center gap-2.5 px-4 py-3">
+        <button
+            type="button"
+            onClick={() => {
+                haptic()
+                openAdd(kind)
+            }}
+            aria-label={`ثبت ${label}`}
+            className="press-row flex min-w-0 items-center gap-2.5 px-4 py-3 text-right"
+        >
             <span
                 className={cn(
                     "grid size-8 shrink-0 place-items-center rounded-full",
@@ -28,13 +39,16 @@ function Stat({ label, value, kind }: { label: string; value: number; kind: LogK
             >
                 <Icon className="size-4" strokeWidth={2.4} />
             </span>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
                 <p className="text-[12px] text-muted-foreground">{label}</p>
                 <p className="truncate text-[15px] font-semibold">
                     <AnimatedNumber value={value} />
                 </p>
             </div>
-        </div>
+            <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-tint text-primary">
+                <Plus className="size-4" strokeWidth={2.4} />
+            </span>
+        </button>
     )
 }
 
@@ -61,6 +75,7 @@ function SummaryCard({ income, costs }: { income: number; costs: number }) {
 function HomeSkeleton() {
     return (
         <div className="space-y-6">
+            <div className="h-10 w-48 animate-pulse rounded-full bg-card" />
             <div className="h-36 animate-pulse rounded-xl bg-card" />
             <div className="h-9 animate-pulse rounded-lg bg-fill" />
             <div className="h-80 animate-pulse rounded-xl bg-card" />
@@ -100,10 +115,11 @@ export function HomeView() {
     if (isLoading) return <HomeSkeleton />
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
+            <MonthBar />
             <SummaryCard income={income} costs={costs} />
 
-            <section className="space-y-3">
+            <section className="space-y-3 pt-2">
                 <SegmentedControl
                     value={kind}
                     onChange={setKind}
@@ -119,6 +135,7 @@ export function HomeView() {
 
             {recent.length > 0 && (
                 <Group
+                    className="pt-2"
                     title="آخرین تراکنش‌ها"
                     action={
                         <Link href="/logs" className="press text-[13px] text-primary">

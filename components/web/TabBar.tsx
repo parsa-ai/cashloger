@@ -1,47 +1,122 @@
 "use client"
 
+import { useRef, useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { ChartPie, ReceiptText, Settings } from "lucide-react"
-import { cn, haptic } from "@/lib/utils"
+import { usePathname, useRouter } from "next/navigation"
+import { ChartPie, Plus, ReceiptText, Settings } from "lucide-react"
 
-const TABS = [
-    { href: "/", label: "خلاصه", icon: ChartPie },
-    { href: "/logs", label: "تراکنش‌ها", icon: ReceiptText },
-    { href: "/user", label: "تنظیمات", icon: Settings },
+import { TABS, tabIndex } from "@/lib/nav"
+import { cn, haptic } from "@/lib/utils"
+import { useUiStore } from "@/store/useUiStore"
+
+const ITEMS = [
+    { label: "خلاصه", icon: ChartPie },
+    { label: "تراکنش‌ها", icon: ReceiptText },
+    { label: "تنظیمات", icon: Settings },
 ]
 
-function isActive(href: string, pathname: string) {
-    if (href === "/") return pathname === "/"
-    if (href === "/user") return pathname === "/user" || pathname === "/categories"
-    return pathname.startsWith(href)
-}
-
+// نوار تب شناور شیشه‌ای؛ نشانگر را می‌شود با انگشت روی تب دیگر کشید
 export function TabBar() {
     const pathname = usePathname()
+    const router = useRouter()
+    const openAdd = useUiStore((s) => s.openAdd)
+    const active = tabIndex(pathname)
+
+    const barRef = useRef<HTMLDivElement>(null)
+    const drag = useRef<{ x: number; dragging: boolean } | null>(null)
+    const [dragIndex, setDragIndex] = useState<number | null>(null)
+
+    const indexAt = (clientX: number) => {
+        const rect = barRef.current!.getBoundingClientRect()
+        // راست‌به‌چپ: تب اول سمت راست است
+        const i = Math.floor(((rect.right - clientX) / rect.width) * TABS.length)
+        return Math.min(TABS.length - 1, Math.max(0, i))
+    }
+
+    const onPointerDown = (e: React.PointerEvent) => {
+        drag.current = { x: e.clientX, dragging: false }
+    }
+
+    const onPointerMove = (e: React.PointerEvent) => {
+        const d = drag.current
+        if (!d) return
+        if (!d.dragging && Math.abs(e.clientX - d.x) > 8) {
+            d.dragging = true
+            barRef.current?.setPointerCapture(e.pointerId)
+        }
+        if (d.dragging) {
+            const i = indexAt(e.clientX)
+            if (i !== (dragIndex ?? active)) haptic(4)
+            setDragIndex(i)
+        }
+    }
+
+    const onPointerEnd = () => {
+        const d = drag.current
+        drag.current = null
+        if (d?.dragging && dragIndex !== null && dragIndex !== active) router.push(TABS[dragIndex])
+        setDragIndex(null)
+    }
+
+    const shown = dragIndex ?? active
 
     return (
-        <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-separator bg-background/85 backdrop-blur-xl backdrop-saturate-150">
-            <div className="mx-auto grid h-[50px] max-w-2xl grid-cols-3">
-                {TABS.map((tab) => {
-                    const active = isActive(tab.href, pathname)
-                    const Icon = tab.icon
-                    return (
-                        <Link
-                            key={tab.href}
-                            href={tab.href}
-                            onClick={() => !active && haptic()}
-                            aria-current={active ? "page" : undefined}
+        <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 pb-[max(env(safe-area-inset-bottom),12px)]">
+            <div className="mx-auto flex max-w-md items-center gap-3 px-4">
+                <div
+                    ref={barRef}
+                    onPointerDown={onPointerDown}
+                    onPointerMove={onPointerMove}
+                    onPointerUp={onPointerEnd}
+                    onPointerCancel={onPointerEnd}
+                    className="glass pointer-events-auto relative grid h-16 flex-1 touch-none grid-cols-3 rounded-full p-1"
+                >
+                    {shown >= 0 && (
+                        <span
+                            aria-hidden
                             className={cn(
-                                "flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors duration-150 active:opacity-60",
-                                active ? "text-primary" : "text-muted-foreground"
+                                "absolute inset-y-1 right-1 rounded-full bg-fill-strong transition-transform ease-ios",
+                                dragIndex !== null ? "duration-200" : "duration-[400ms]"
                             )}
-                        >
-                            <Icon className="size-6" strokeWidth={active ? 2.2 : 1.7} />
-                            {tab.label}
-                        </Link>
-                    )
-                })}
+                            style={{
+                                width: `calc((100% - 8px) / ${TABS.length})`,
+                                transform: `translateX(${-shown * 100}%) scale(${dragIndex !== null ? 1.06 : 1})`,
+                            }}
+                        />
+                    )}
+                    {TABS.map((href, i) => {
+                        const { label, icon: Icon } = ITEMS[i]
+                        const on = i === shown
+                        return (
+                            <Link
+                                key={href}
+                                href={href}
+                                draggable={false}
+                                onClick={() => i !== active && haptic()}
+                                aria-current={i === active ? "page" : undefined}
+                                className={cn(
+                                    "relative flex flex-col items-center justify-center gap-0.5 rounded-full text-[11px] font-medium transition-colors duration-200",
+                                    on ? "text-primary" : "text-foreground/70"
+                                )}
+                            >
+                                <Icon className="size-[22px]" strokeWidth={on ? 2.2 : 1.8} />
+                                {label}
+                            </Link>
+                        )
+                    })}
+                </div>
+
+                <button
+                    type="button"
+                    aria-label="تراکنش جدید"
+                    onClick={() => {
+                        haptic()
+                        openAdd()
+                    }}
+                    className="press-scale pointer-events-auto grid size-16 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.25),var(--glass-shadow)]"
+                >
+                    <Plus className="size-7" strokeWidth={2.2} />
+                </button>
             </div>
         </nav>
     )
