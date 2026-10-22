@@ -1,5 +1,4 @@
-import { CategoryManager } from "@/components/web/CategoryManager";
-
-export default function CategoriesPage() {
-    return <CategoryManager />
+// محتوای صفحه را AppViews در layout از روی مسیر رندر می‌کند تا جابه‌جایی بین صفحه‌ها بدون سرور باشد
+export default function Page() {
+    return null
 }

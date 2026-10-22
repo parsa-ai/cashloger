@@ -1,11 +1,11 @@
 "use client"
 
 import { useRef, useState } from "react"
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { ChartPie, Plus, ReceiptText } from "lucide-react"
 
-import { TABS, tabIndex } from "@/lib/nav"
+import { NavLink } from "@/components/web/NavLink"
+import { navigate, TABS, tabIndex } from "@/lib/nav"
 import { cn, haptic } from "@/lib/utils"
 import { useUiStore } from "@/store/useUiStore"
 
@@ -17,13 +17,22 @@ const ITEMS = [
 // نوار تب شناور شیشه‌ای؛ نشانگر را می‌شود با انگشت روی تب دیگر کشید
 export function TabBar() {
     const pathname = usePathname()
-    const router = useRouter()
     const openAdd = useUiStore((s) => s.openAdd)
     const active = tabIndex(pathname)
 
     const barRef = useRef<HTMLDivElement>(null)
     const drag = useRef<{ x: number; dragging: boolean } | null>(null)
     const [dragIndex, setDragIndex] = useState<number | null>(null)
+    // تبی که به سمتش رفته‌ایم ولی مسیر هنوز عوض نشده؛ نشانگر همان‌جا می‌ماند و برنمی‌گردد
+    const [target, setTarget] = useState<{ index: number; from: string } | null>(null)
+    const pendingIndex = target && target.from === pathname ? target.index : null
+
+    const go = (i: number) => {
+        if (i === active) return
+        haptic()
+        setTarget({ index: i, from: pathname })
+        navigate(TABS[i])
+    }
 
     const indexAt = (clientX: number) => {
         const rect = barRef.current!.getBoundingClientRect()
@@ -53,11 +62,14 @@ export function TabBar() {
     const onPointerEnd = () => {
         const d = drag.current
         drag.current = null
-        if (d?.dragging && dragIndex !== null && dragIndex !== active) router.push(TABS[dragIndex])
+        if (d?.dragging && dragIndex !== null && dragIndex !== active) {
+            setTarget({ index: dragIndex, from: pathname })
+            navigate(TABS[dragIndex])
+        }
         setDragIndex(null)
     }
 
-    const shown = dragIndex ?? active
+    const shown = dragIndex ?? pendingIndex ?? active
 
     // صفحه‌های داخلی (پروفایل، دسته‌ها) نوار تب ندارند و با دکمهٔ برگشت بالا بسته می‌شوند
     if (active === -1) return null
@@ -103,11 +115,14 @@ export function TabBar() {
                         const { label, icon: Icon } = ITEMS[i]
                         const on = i === shown
                         return (
-                            <Link
+                            <NavLink
                                 key={href}
                                 href={href}
                                 draggable={false}
-                                onClick={() => i !== active && haptic()}
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    go(i)
+                                }}
                                 aria-current={i === active ? "page" : undefined}
                                 className={cn(
                                     "relative flex flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium transition-colors duration-200",
@@ -116,7 +131,7 @@ export function TabBar() {
                             >
                                 <Icon className="size-[22px]" strokeWidth={on ? 2.2 : 1.8} />
                                 {label}
-                            </Link>
+                            </NavLink>
                         )
                     })}
                 </div>

@@ -1,7 +1,7 @@
 // سرویس‌ورکر کش لاگر: صفحات و فایل‌های برنامه را کش می‌کند تا بدون اینترنت هم باز شود.
 // داده‌ها جدا از این فایل، در حافظهٔ دستگاه و صف همگام‌سازی نگه داشته می‌شوند.
 
-const VERSION = "v2";
+const VERSION = "v3";
 const SHELL_CACHE = `shell-${VERSION}`;
 const STATIC_CACHE = `static-${VERSION}`;
 const PAGES_CACHE = `pages-${VERSION}`;

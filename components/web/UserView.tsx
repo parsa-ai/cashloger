@@ -216,7 +216,7 @@ function formatSyncTime(timestamp: number | null) {
   return 'آخرین همگام‌سازی ' + new Date(timestamp).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })
 }
 
-export default function UserPage() {
+export function UserView() {
   const router = useRouter()
   const supabase = createClient()
   const { username, email } = useProfile()

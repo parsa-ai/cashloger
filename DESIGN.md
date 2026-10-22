@@ -27,6 +27,15 @@ edge), 16px in from the screen sides and clear of the safe areas, like Telegram 
 - Tab bar: full-round capsule whose selection pill can be dragged, with the `+` as a matching glass circle on
   its right. Swiping the page sideways also changes tab.
 - Toasts are glass pills above the tab bar; destructive or quick actions offer "برگرداندن" (undo) there.
+- Pages switch on the client (`navigate` / `NavLink` in `lib/nav.ts`, views in `AppViews`): no server round
+  trip, so a tab changes the moment it's tapped and works offline. Never use `next/link` or `router.push`
+  between app pages.
+
+## Sheets
+
+- Nav bar: confirm («ذخیره») on the right, title in the middle, «انصراف» on the left in muted text.
+- Transaction sheet reads top to bottom by importance: kind → amount (hero, with the amount in words under it)
+  → category chips → date / note → numpad.
 
 ## Shape and spacing
 
@@ -57,8 +66,8 @@ Money always uses `.num` (tabular digits) so it doesn't jitter while counting.
 
 - One accent per theme (`--primary`), used for actions, selection and links — not decoration.
 - Income is `text-success`; costs stay in the foreground color (red is for destructive actions only).
-- Category colors come from the 64-color palette in `lib/palette.ts`: 16 hues × 4 tones, every color at
-  nearly the most chroma its hue allows in sRGB, so they read as one family.
+- New categories pick from 12 `SWATCHES` in `lib/palette.ts`. Older categories may hold any color from the
+  full 64-color palette; those are kept as they are and shown first in the picker.
 
 ## Avatars
 

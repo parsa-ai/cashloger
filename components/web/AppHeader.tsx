@@ -1,14 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { sleepy } from "blobatar/expression"
 
 import { UserBlob } from "@/components/web/Avatars"
+import { NavLink } from "@/components/web/NavLink"
 import { useBlobName } from "@/components/web/ProfileProvider"
-import { TABS } from "@/lib/nav"
+import { navigate, TABS } from "@/lib/nav"
 import { cn, formatMonthTitle, haptic, isSamePersianMonth, shiftPersianMonth } from "@/lib/utils"
 import { useLogStore } from "@/store/useChartStore"
 import useDateStore from "@/store/useYearStore"
@@ -56,7 +56,7 @@ function ProfileChip() {
           : "همگام است"
 
     return (
-        <Link
+        <NavLink
             href="/user"
             aria-label={`پروفایل (${status})`}
             onClick={() => {
@@ -80,7 +80,7 @@ function ProfileChip() {
                 )}
             </span>
             پروفایل
-        </Link>
+        </NavLink>
     )
 }
 
@@ -131,20 +131,19 @@ function MonthPicker() {
 }
 
 // دکمهٔ برگشت صفحه‌های داخلی: اگر از داخل برنامه آمده‌ایم همان‌جا برمی‌گردد، وگرنه به صفحهٔ بالادستی
-// آیا داخل همین برنامه جابه‌جا شده‌ایم (پس router.back از برنامه بیرون نمی‌رود)
+// آیا داخل همین برنامه جابه‌جا شده‌ایم (پس history.back از برنامه بیرون نمی‌رود)
 let entryPath: string | null = null
 let navigated = false
 
 function BackButton({ pathname }: { pathname: string }) {
-    const router = useRouter()
     return (
         <button
             type="button"
             aria-label="بازگشت"
             onClick={() => {
                 haptic()
-                if (navigated) router.back()
-                else router.push(PARENTS[pathname] ?? "/")
+                if (navigated) window.history.back()
+                else navigate(PARENTS[pathname] ?? "/", { replace: true })
             }}
             className="glass press pointer-events-auto grid size-11 place-items-center justify-self-start rounded-full text-primary"
         >

@@ -1,4 +1,4 @@
-import Link from "next/link"
+import { NavLink } from "@/components/web/NavLink"
 import { ChevronLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -82,9 +82,9 @@ export function Row({ leading, title, subtitle, trailing, href, onClick, chevron
 
     if (href) {
         return (
-            <Link href={href} className={classes}>
+            <NavLink href={href} className={classes}>
                 {content}
-            </Link>
+            </NavLink>
         )
     }
     if (onClick) {

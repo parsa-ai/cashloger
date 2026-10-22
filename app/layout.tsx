@@ -3,9 +3,11 @@ import { Vazirmatn } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import AppShell from "@/components/web/AppShell";
+import { AppViews } from "@/components/web/AppViews";
 import DataLoader from "@/components/web/DataLoader";
 import { AppHeader } from "@/components/web/AppHeader";
 import { InstallPrompt } from "@/components/web/InstallPrompt";
+import { Onboarding } from "@/components/web/Onboarding";
 import { ProfileProvider } from "@/components/web/ProfileProvider";
 import { TransactionSheetHost } from "@/components/web/TransactionSheet";
 import { SwipeNav } from "@/components/web/SwipeNav";
@@ -80,10 +82,13 @@ export default async function RootLayout({
                 <div className="flex min-h-dvh flex-col">
                   <AppHeader />
                   <main className="mx-auto w-full max-w-2xl flex-1 overflow-x-clip px-4 pt-[calc(env(safe-area-inset-top)+68px)] pb-[calc(max(env(safe-area-inset-bottom),12px)+96px)]">
-                    <SwipeNav>{children}</SwipeNav>
+                    <SwipeNav>
+                      <AppViews>{children}</AppViews>
+                    </SwipeNav>
                   </main>
                   <TabBar />
                   <TransactionSheetHost />
+                  <Onboarding />
                 </div>
               ) : (
                 children

@@ -1,12 +1,12 @@
 "use client"
 
 import { useMemo } from "react"
-import Link from "next/link"
 import { ArrowDown, ArrowUp, Plus } from "lucide-react"
 
 import { AnimatedNumber } from "@/components/web/AnimatedNumber"
 import { buildChartItems, SpendingChart } from "@/components/web/Chart"
 import { Group } from "@/components/web/Group"
+import { NavLink } from "@/components/web/NavLink"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { TransactionRow } from "@/components/web/TransactionRow"
 import { LogKind } from "@/lib/types"
@@ -135,9 +135,9 @@ export function HomeView() {
                     className="pt-2"
                     title="آخرین تراکنش‌ها"
                     action={
-                        <Link href="/logs" className="press text-[13px] text-primary">
+                        <NavLink href="/logs" className="press text-[13px] text-primary">
                             همه
-                        </Link>
+                        </NavLink>
                     }
                 >
                     {recent.map((entry) => (

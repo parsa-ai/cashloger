@@ -1,15 +1,14 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 
-import { TABS, tabIndex } from "@/lib/nav"
+import { navigate, TABS, tabIndex } from "@/lib/nav"
 import { haptic } from "@/lib/utils"
 
 // کشیدن افقی روی صفحه برای رفتن به تب کناری (مثل تلگرام)
 export function SwipeNav({ children }: { children: React.ReactNode }) {
     const ref = useRef<HTMLDivElement>(null)
-    const router = useRouter()
     const pathname = usePathname()
 
     useEffect(() => {
@@ -45,7 +44,7 @@ export function SwipeNav({ children }: { children: React.ReactNode }) {
             const next = current + (dx > 0 ? 1 : -1)
             if (next < 0 || next >= TABS.length) return
             haptic()
-            router.push(TABS[next])
+            navigate(TABS[next])
         }
 
         el.addEventListener("touchstart", onStart, { passive: true })
@@ -54,12 +53,7 @@ export function SwipeNav({ children }: { children: React.ReactNode }) {
             el.removeEventListener("touchstart", onStart)
             el.removeEventListener("touchend", onEnd)
         }
-    }, [pathname, router])
-
-    // پیش‌بارگذاری تب‌ها تا جابه‌جایی فوری باشد
-    useEffect(() => {
-        for (const href of TABS) router.prefetch(href)
-    }, [router])
+    }, [pathname])
 
     return (
         <div ref={ref} className="min-h-full" data-tab={tabIndex(pathname)}>
