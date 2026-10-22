@@ -11,3 +11,16 @@ export function routeIndex(pathname: string) {
 export function tabIndex(pathname: string) {
     return TABS.indexOf(pathname as (typeof TABS)[number])
 }
+
+export function isAppView(pathname: string) {
+    return pathname in ORDER
+}
+
+// جابه‌جایی بین صفحه‌های برنامه بدون رفت‌وبرگشت به سرور: همهٔ صفحه‌ها سمت کاربر رندر می‌شوند
+// و داده‌ها در حافظهٔ دستگاه‌اند، پس جابه‌جایی فوری است و آفلاین هم کار می‌کند.
+// Next.js تغییر history را می‌شنود و usePathname را به‌روز می‌کند.
+export function navigate(href: string, { replace = false } = {}) {
+    if (typeof window === "undefined" || window.location.pathname === href) return
+    if (replace) window.history.replaceState(null, "", href)
+    else window.history.pushState(null, "", href)
+}

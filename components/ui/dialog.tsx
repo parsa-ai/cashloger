@@ -74,7 +74,7 @@ function DialogContent({
   )
 }
 
-// نوار بالای شیت به سبک iOS: دکمهٔ لغو، عنوان، دکمهٔ تأیید
+// نوار بالای شیت: دکمهٔ تأیید سمت راست، عنوان وسط، لغو سمت چپ
 function DialogNav({
   title,
   cancelLabel = "انصراف",
@@ -88,11 +88,12 @@ function DialogNav({
 }) {
   return (
     <div className={cn("grid h-12 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 px-4", className)}>
-      <DialogPrimitive.Close className="press justify-self-start text-[15px] text-primary outline-none">
+      {/* راست‌به‌چپ: ستون اول سمت راست است */}
+      <div className="justify-self-start">{action}</div>
+      <DialogPrimitive.Title className="truncate text-[17px] font-semibold">{title}</DialogPrimitive.Title>
+      <DialogPrimitive.Close className="press justify-self-end text-[15px] text-muted-foreground outline-none">
         {cancelLabel}
       </DialogPrimitive.Close>
-      <DialogPrimitive.Title className="truncate text-[17px] font-semibold">{title}</DialogPrimitive.Title>
-      <div className="justify-self-end">{action}</div>
     </div>
   )
 }

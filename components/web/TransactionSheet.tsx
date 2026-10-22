@@ -1,18 +1,17 @@
 "use client"
 
-import { useLayoutEffect, useMemo, useRef, useState } from "react"
-import Link from "next/link"
-import { CalendarDays, PencilLine, Plus, Trash2 } from "lucide-react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { CalendarDays, Delete, PencilLine, Plus, Trash2 } from "lucide-react"
 import { Popover } from "radix-ui"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogNav } from "@/components/ui/dialog"
-import { CategoryAvatar } from "@/components/web/Avatars"
 import { PersianCalendar } from "@/components/web/PersianCalendar"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
-import { WheelPicker } from "@/components/web/WheelPicker"
+import { navigate } from "@/lib/nav"
+import { UNCATEGORIZED_COLOR } from "@/lib/palette"
 import { LogEntry, LogKind } from "@/lib/types"
-import { addDays, cn, defaultEntryDate, haptic, isSameDay } from "@/lib/utils"
+import { addDays, cn, defaultEntryDate, formatAmountWords, haptic, isSameDay } from "@/lib/utils"
 import { useLogStore } from "@/store/useChartStore"
 import { toast } from "@/store/useToastStore"
 import { useUiStore } from "@/store/useUiStore"
@@ -48,70 +47,36 @@ function toLatinDigits(text: string) {
     return text.replace(/[۰-۹٠-٩]/g, (d) => String(d.charCodeAt(0) - (d >= "۰" ? 0x06f0 : 0x0660)))
 }
 
-// سه‌رقم‌سه‌رقم با ویرگول: 100,000
-function groupDigits(digits: string) {
-    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+// افزودن رقم به مبلغ: صفر اول نمی‌گیرد و از سقف رقم‌ها رد نمی‌شود
+function pushDigits(digits: string, add: string) {
+    return (digits + add).replace(/^0+/, "").slice(0, MAX_DIGITS)
 }
 
-// فیلد مبلغ: ارقام فارسی هم پذیرفته و انگلیسی ذخیره می‌شوند؛ مکان‌نما بعد از ویرگول‌گذاری سر جایش می‌ماند
-function AmountInput({
-    digits,
-    onChange,
-    onSubmit,
-    className,
-}: {
-    digits: string
-    onChange: (digits: string) => void
-    onSubmit: () => void
-    className?: string
-}) {
-    const ref = useRef<HTMLInputElement>(null)
-    // تعداد رقم‌های قبل از مکان‌نما، برای برگرداندنش بعد از رندر
-    const caret = useRef<number | null>(null)
-    const text = groupDigits(digits)
+const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "000", "0", "back"] as const
 
-    useLayoutEffect(() => {
-        const el = ref.current
-        const count = caret.current
-        if (!el || count === null) return
-        caret.current = null
-        let pos = 0
-        for (let seen = 0; pos < el.value.length && seen < count; pos++) if (/\d/.test(el.value[pos])) seen++
-        el.setSelectionRange(pos, pos)
-    })
-
+// صفحه‌کلید عددی؛ چیدمان مثل ماشین‌حساب گوشی (۱ بالا چپ)
+function Numpad({ onKey }: { onKey: (key: (typeof KEYS)[number]) => void }) {
     return (
-        <input
-            ref={ref}
-            type="text"
-            inputMode="numeric"
-            dir="ltr"
-            autoComplete="off"
-            value={text}
-            onChange={(e) => {
-                const raw = toLatinDigits(e.target.value)
-                const before = raw.slice(0, e.target.selectionStart ?? raw.length).replace(/\D/g, "").length
-                const next = raw.replace(/\D/g, "").replace(/^0+/, "").slice(0, MAX_DIGITS)
-                caret.current = Math.min(before - (raw.replace(/\D/g, "").length - next.length), next.length)
-                onChange(next)
-            }}
-            onKeyDown={(e) => {
-                if (e.key === "Enter") return onSubmit()
-                // پاک کردن روی ویرگول، رقم قبلش را پاک کند
-                const el = e.currentTarget
-                const pos = el.selectionStart ?? 0
-                if (e.key === "Backspace" && pos === el.selectionEnd && el.value[pos - 1] === ",") el.setSelectionRange(pos - 1, pos - 1)
-            }}
-            placeholder="0"
-            aria-label="مبلغ"
-            enterKeyHint="done"
-            style={{ width: `${Math.max(1, text.length) * 0.62 + 0.4}em` }}
-            className={cn(
-                "num max-w-full bg-transparent text-center leading-tight font-bold outline-none placeholder:text-muted-foreground/40",
-                text.length > 11 ? "text-[30px]" : "text-[40px]",
-                className
-            )}
-        />
+        <div dir="ltr" className="grid grid-cols-3 gap-2">
+            {KEYS.map((key) => (
+                <button
+                    key={key}
+                    type="button"
+                    aria-label={key === "back" ? "پاک کردن" : undefined}
+                    onClick={() => {
+                        haptic(4)
+                        onKey(key)
+                    }}
+                    className="press num grid h-[52px] place-items-center rounded-xl bg-card text-[24px] font-medium select-none"
+                >
+                    {key === "back" ? (
+                        <Delete className="size-6 text-muted-foreground" />
+                    ) : (
+                        Number(key).toLocaleString("fa-IR", { minimumIntegerDigits: key.length, useGrouping: false })
+                    )}
+                </button>
+            ))}
+        </div>
     )
 }
 
@@ -137,6 +102,7 @@ function TransactionForm() {
     const amount = digits ? Number(digits) : 0
     const isCost = kind === "cost"
     const noun = isCost ? "هزینه" : "درآمد"
+    const entryKind = entry ? (entry.mode === "increase" ? "income" : "cost") : null
 
     // دسته‌های پرکاربردتر اول؛ اولی پیش‌فرض تراکنش جدید است
     const items = useMemo(() => {
@@ -149,12 +115,20 @@ function TransactionForm() {
             .map(({ c }) => c)
     }, [allCategories, allEntries, kind])
 
-    const category = selected && items.some((c) => c.id === selected) ? selected : entry && kind === (entry.mode === "increase" ? "income" : "cost") ? null : items[0]?.id ?? null
+    const category =
+        selected && items.some((c) => c.id === selected)
+            ? selected
+            : entry && kind === entryKind
+              ? null
+              : items[0]?.id ?? null
 
-    // تراکنش بی‌دسته‌ای که ویرایش می‌شود، روی چرخ گزینهٔ «بدون دسته» هم دارد
-    const wheelItems = useMemo(
-        () => (entry && !entry.key ? [{ id: NONE, label: "بدون دسته", color: undefined }, ...items] : items),
-        [entry, items]
+    // تراکنش بی‌دسته‌ای که ویرایش می‌شود، گزینهٔ «بدون دسته» هم دارد
+    const chips = useMemo(
+        () =>
+            entry && !entry.key && kind === entryKind
+                ? [{ id: NONE, label: "بدون دسته", color: UNCATEGORIZED_COLOR }, ...items]
+                : items,
+        [entry, entryKind, items, kind]
     )
 
     const close = () => setOpen(false)
@@ -192,22 +166,54 @@ function TransactionForm() {
         close()
     }
 
+    const pressKey = (key: (typeof KEYS)[number]) => {
+        if (key === "back") setDigits((d) => d.slice(0, -1))
+        else setDigits((d) => pushDigits(d, key))
+    }
+
+    // روی دسکتاپ با کیبورد هم می‌شود مبلغ را زد
+    const submitRef = useRef(submit)
+    useLayoutEffect(() => {
+        submitRef.current = submit
+    })
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement
+            if (target.closest("input, textarea") || e.metaKey || e.ctrlKey || e.altKey) return
+            const key = toLatinDigits(e.key)
+            if (/^\d$/.test(key)) setDigits((d) => pushDigits(d, key))
+            else if (e.key === "Backspace") setDigits((d) => d.slice(0, -1))
+            else if (e.key === "Enter" && !target.closest("button")) submitRef.current()
+            else return
+            e.preventDefault()
+        }
+        window.addEventListener("keydown", onKeyDown)
+        return () => window.removeEventListener("keydown", onKeyDown)
+    }, [])
+
+    // دستهٔ انتخاب‌شده همیشه در دید باشد
+    const chipsRef = useRef<HTMLDivElement>(null)
+    useEffect(() => {
+        chipsRef.current
+            ?.querySelector<HTMLElement>("[aria-pressed=true]")
+            ?.scrollIntoView({ block: "nearest", inline: "nearest" })
+    }, [category])
+
+    const words = formatAmountWords(amount)
+
     return (
         <>
             <DialogNav
                 title={entry ? `ویرایش ${noun}` : `${noun} جدید`}
                 action={
-                    entry && (
-                        <Button type="button" variant="plain" size="nav" className="text-destructive" aria-label="حذف تراکنش" onClick={handleDelete}>
-                            <Trash2 className="size-5" />
-                        </Button>
-                    )
+                    <Button type="button" size="sm" className="h-9 rounded-full px-4 text-[15px]" disabled={amount <= 0} onClick={submit}>
+                        ذخیره
+                    </Button>
                 }
             />
 
-            <div className="no-scrollbar flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pb-3">
+            <div className="no-scrollbar flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pt-1 pb-3">
                 <SegmentedControl
-                    size="lg"
                     value={kind}
                     onChange={(k) => {
                         setKind(k)
@@ -219,60 +225,75 @@ function TransactionForm() {
                     ]}
                 />
 
-                {/* مبلغ: فیلد عددی ساده با جداکنندهٔ هزارگان */}
-                <label className="flex items-baseline justify-center gap-1.5 py-2">
-                    <AmountInput
-                        digits={digits}
-                        onChange={setDigits}
-                        onSubmit={submit}
-                        className={cn(amount > 0 && !isCost && "text-success")}
-                    />
-                    <span className="text-[15px] font-medium text-muted-foreground">تومان</span>
-                </label>
-
-                {/* دسته‌ها: چرخ انتخاب، پرکاربردها اول */}
-                <div className="space-y-1">
-                    <div className="flex items-center justify-between px-1">
-                        <span className="text-[13px] text-muted-foreground">دسته</span>
-                        <Link href="/categories" onClick={close} className="press flex items-center gap-1 text-[13px] font-medium text-primary">
-                            <Plus className="size-3.5" />
-                            دسته جدید
-                        </Link>
-                    </div>
-                    {wheelItems.length > 0 && (
-                        <WheelPicker
-                            key={kind}
-                            label="دسته"
-                            items={wheelItems}
-                            value={category ?? NONE}
-                            getKey={(c) => c.id}
-                            onChange={(id) => setSelected(id === NONE ? null : id)}
-                            render={(c, active) => (
-                                <>
-                                    <CategoryAvatar label={c.label} color={c.color} size={28} />
-                                    <span className={cn("truncate", active && "font-semibold")}>{c.label}</span>
-                                </>
+                {/* ۱) مبلغ: مهم‌ترین چیز صفحه */}
+                <div className="flex flex-col items-center py-1" aria-live="polite">
+                    <p className="flex items-baseline gap-2">
+                        <span
+                            className={cn(
+                                "num leading-none font-bold tracking-tight transition-colors duration-200",
+                                digits.length > 9 ? "text-[36px]" : "text-[46px]",
+                                amount === 0 ? "text-muted-foreground/40" : !isCost && "text-success"
                             )}
-                        />
-                    )}
+                        >
+                            {amount.toLocaleString("fa-IR")}
+                        </span>
+                        <span className="text-[16px] font-medium text-muted-foreground">تومان</span>
+                    </p>
+                    <p className="mt-1.5 h-5 text-[13px] text-muted-foreground">{words && `${words} تومان`}</p>
                 </div>
 
-                {/* تاریخ و توضیح */}
+                {/* ۲) دسته */}
+                <div ref={chipsRef} className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+                    {chips.map((c) => {
+                        const on = (category ?? NONE) === c.id
+                        return (
+                            <button
+                                key={c.id}
+                                type="button"
+                                aria-pressed={on}
+                                onClick={() => {
+                                    if (!on) haptic()
+                                    setSelected(c.id === NONE ? null : c.id)
+                                }}
+                                className={cn(
+                                    "press flex h-9 shrink-0 items-center gap-2 rounded-full ps-2.5 pe-3.5 text-[14px] whitespace-nowrap transition-colors duration-200",
+                                    on ? "bg-foreground font-semibold text-background" : "bg-card"
+                                )}
+                            >
+                                <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: c.color }} />
+                                {c.label}
+                            </button>
+                        )
+                    })}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            close()
+                            navigate("/categories")
+                        }}
+                        className="press flex h-9 shrink-0 items-center gap-1 rounded-full bg-tint ps-2.5 pe-3.5 text-[14px] font-medium whitespace-nowrap text-primary"
+                    >
+                        <Plus className="size-4" />
+                        {chips.length === 0 ? "افزودن دسته" : "دسته"}
+                    </button>
+                </div>
+
+                {/* ۳) جزئیات: تاریخ، توضیح، حذف */}
                 <div className="flex items-center gap-2">
                     {/* تقویم در یک پاپ‌اور شناور روی شیت باز می‌شود */}
                     <Popover.Root open={calendarOpen} onOpenChange={setCalendarOpen}>
                         <Popover.Trigger asChild>
-                        <button
-                            type="button"
-                            onClick={() => haptic()}
-                            className={cn(
-                                "press flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-[14px] font-medium transition-colors duration-200",
-                                calendarOpen ? "bg-primary text-primary-foreground" : "bg-card"
-                            )}
-                        >
-                            <CalendarDays className="size-[18px]" />
-                            <span key={date.toDateString()} className="animate-fade-in">{shortDay(date)}</span>
-                        </button>
+                            <button
+                                type="button"
+                                onClick={() => haptic()}
+                                className={cn(
+                                    "press flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-medium transition-colors duration-200",
+                                    calendarOpen ? "bg-primary text-primary-foreground" : "bg-card"
+                                )}
+                            >
+                                <CalendarDays className="size-4" />
+                                <span key={date.toDateString()} className="animate-fade-in">{shortDay(date)}</span>
+                            </button>
                         </Popover.Trigger>
                         <Popover.Portal>
                             <Popover.Content
@@ -292,7 +313,7 @@ function TransactionForm() {
                             </Popover.Content>
                         </Popover.Portal>
                     </Popover.Root>
-                    <label className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full bg-card px-4">
+                    <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-full bg-card px-3.5">
                         <PencilLine className="size-4 shrink-0 text-muted-foreground" />
                         <input
                             value={description}
@@ -305,11 +326,20 @@ function TransactionForm() {
                             className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground/70"
                         />
                     </label>
+                    {entry && (
+                        <button
+                            type="button"
+                            aria-label="حذف تراکنش"
+                            onClick={handleDelete}
+                            className="press grid size-10 shrink-0 place-items-center rounded-full bg-destructive/10 text-destructive"
+                        >
+                            <Trash2 className="size-[18px]" />
+                        </button>
+                    )}
                 </div>
 
-                <Button size="lg" className="w-full" disabled={amount <= 0} onClick={submit}>
-                    {entry ? "ذخیره تغییرات" : `ثبت ${noun}`}
-                </Button>
+                {/* ۴) صفحه‌کلید عددی */}
+                <Numpad onKey={pressKey} />
             </div>
         </>
     )
