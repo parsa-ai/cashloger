@@ -253,7 +253,7 @@ export default function LoginPage() {
                       autoComplete="username"
                       autoCapitalize="none"
                       spellCheck={false}
-                      className={cn(inputClass, 'text-right placeholder:text-right')}
+                      className={cn(inputClass, 'text-left placeholder:text-right')}
                     />
                   </Field>
                 )}
