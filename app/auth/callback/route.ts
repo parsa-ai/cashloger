@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-// لینک‌های ایمیل (تأیید ثبت‌نام و بازنشانی رمز) با یک code به اینجا برمی‌گردند؛
+// لینک‌های ایمیل (تأیید ثبت‌نام و بازنشانی رمز) و ورود با گوگل با یک code به اینجا برمی‌گردند؛
 // code با نشست کاربر عوض می‌شود و کاربر به مقصد اصلی می‌رود
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl
@@ -16,5 +16,7 @@ export async function GET(request: NextRequest) {
     if (!error) return NextResponse.redirect(`${origin}${safeNext}`)
   }
 
-  return NextResponse.redirect(`${origin}/login?error=link`)
+  // خطای گوگل (مثلاً لغو ورود) به‌صورت error در آدرس برمی‌گردد
+  const failure = searchParams.has('error') ? 'oauth' : 'link'
+  return NextResponse.redirect(`${origin}/login?error=${failure}`)
 }
