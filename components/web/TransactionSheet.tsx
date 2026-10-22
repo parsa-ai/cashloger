@@ -6,10 +6,11 @@ import { Popover } from "radix-ui"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogNav } from "@/components/ui/dialog"
+import { CategoryAvatar } from "@/components/web/Avatars"
 import { PersianCalendar } from "@/components/web/PersianCalendar"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
+import { WheelPicker } from "@/components/web/WheelPicker"
 import { navigate } from "@/lib/nav"
-import { UNCATEGORIZED_COLOR } from "@/lib/palette"
 import { LogEntry, LogKind } from "@/lib/types"
 import { addDays, cn, defaultEntryDate, formatAmountWords, haptic, isSameDay } from "@/lib/utils"
 import { useLogStore } from "@/store/useChartStore"
@@ -126,7 +127,7 @@ function TransactionForm() {
     const chips = useMemo(
         () =>
             entry && !entry.key && kind === entryKind
-                ? [{ id: NONE, label: "بدون دسته", color: UNCATEGORIZED_COLOR }, ...items]
+                ? [{ id: NONE, label: "بدون دسته", color: undefined as string | undefined }, ...items]
                 : items,
         [entry, entryKind, items, kind]
     )
@@ -191,14 +192,6 @@ function TransactionForm() {
         return () => window.removeEventListener("keydown", onKeyDown)
     }, [])
 
-    // دستهٔ انتخاب‌شده همیشه در دید باشد
-    const chipsRef = useRef<HTMLDivElement>(null)
-    useEffect(() => {
-        chipsRef.current
-            ?.querySelector<HTMLElement>("[aria-pressed=true]")
-            ?.scrollIntoView({ block: "nearest", inline: "nearest" })
-    }, [category])
-
     const words = formatAmountWords(amount)
 
     return (
@@ -242,40 +235,38 @@ function TransactionForm() {
                     <p className="mt-1.5 h-5 text-[13px] text-muted-foreground">{words && `${words} تومان`}</p>
                 </div>
 
-                {/* ۲) دسته */}
-                <div ref={chipsRef} className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
-                    {chips.map((c) => {
-                        const on = (category ?? NONE) === c.id
-                        return (
-                            <button
-                                key={c.id}
-                                type="button"
-                                aria-pressed={on}
-                                onClick={() => {
-                                    if (!on) haptic()
-                                    setSelected(c.id === NONE ? null : c.id)
-                                }}
-                                className={cn(
-                                    "press flex h-9 shrink-0 items-center gap-2 rounded-full ps-2.5 pe-3.5 text-[14px] whitespace-nowrap transition-colors duration-200",
-                                    on ? "bg-foreground font-semibold text-background" : "bg-card"
-                                )}
-                            >
-                                <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: c.color }} />
-                                {c.label}
-                            </button>
-                        )
-                    })}
-                    <button
-                        type="button"
-                        onClick={() => {
-                            close()
-                            navigate("/categories")
-                        }}
-                        className="press flex h-9 shrink-0 items-center gap-1 rounded-full bg-tint ps-2.5 pe-3.5 text-[14px] font-medium whitespace-nowrap text-primary"
-                    >
-                        <Plus className="size-4" />
-                        {chips.length === 0 ? "افزودن دسته" : "دسته"}
-                    </button>
+                {/* ۲) دسته: چرخ انتخاب با آیکون هر دسته، پرکاربردها اول */}
+                <div className="space-y-1">
+                    <div className="flex items-center justify-between px-1">
+                        <span className="text-[13px] text-muted-foreground">دسته</span>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                close()
+                                navigate("/categories")
+                            }}
+                            className="press flex items-center gap-1 text-[13px] font-medium text-primary"
+                        >
+                            <Plus className="size-3.5" />
+                            دسته جدید
+                        </button>
+                    </div>
+                    {chips.length > 0 && (
+                        <WheelPicker
+                            key={kind}
+                            label="دسته"
+                            items={chips}
+                            value={category ?? NONE}
+                            getKey={(c) => c.id}
+                            onChange={(id) => setSelected(id === NONE ? null : id)}
+                            render={(c, active) => (
+                                <>
+                                    <CategoryAvatar label={c.label} color={c.color} size={26} />
+                                    <span className={cn("truncate", active && "font-semibold")}>{c.label}</span>
+                                </>
+                            )}
+                        />
+                    )}
                 </div>
 
                 {/* ۳) جزئیات: تاریخ، توضیح، حذف */}
