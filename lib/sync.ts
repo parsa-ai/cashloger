@@ -29,7 +29,7 @@ export interface LocalData {
 }
 
 export const TRANSACTION_COLUMNS = "id, category_id, kind, amount, description, occurred_at"
-export const CATEGORY_COLUMNS = "id, kind, label, color"
+export const CATEGORY_COLUMNS = "id, kind, label, color, budget"
 
 export function rowToEntry(row: TransactionRow): LogEntry {
     return {
@@ -75,7 +75,7 @@ export function sameData(a: LocalData, b: LocalData) {
     if (a.entries.length !== b.entries.length || a.categories.length !== b.categories.length) return false
     const entryKey = (e: LogEntry) =>
         `${e.id}|${e.key}|${e.date.getTime()}|${e.visitors}|${e.description ?? ""}|${e.mode}`
-    const categoryKey = (c: Category) => `${c.id}|${c.kind}|${c.label}|${c.color}`
+    const categoryKey = (c: Category) => `${c.id}|${c.kind}|${c.label}|${c.color}|${c.budget ?? ""}`
     return (
         a.entries.every((e, i) => entryKey(e) === entryKey(b.entries[i])) &&
         a.categories.every((c, i) => categoryKey(c) === categoryKey(b.categories[i]))
@@ -185,7 +185,11 @@ export async function fetchRemote(
         return {
             ok: true,
             data: {
-                categories: (categoriesRes.data as Category[]).map((c) => ({ ...c, color: normalizeColor(c.color) })),
+                categories: (categoriesRes.data as Category[]).map((c) => ({
+                    ...c,
+                    color: normalizeColor(c.color),
+                    budget: c.budget == null ? null : Number(c.budget),
+                })),
                 entries: (transactionsRes.data as TransactionRow[]).map(rowToEntry),
             },
         }

@@ -6,10 +6,10 @@ import { ArrowDown, ArrowUp, Plus } from "lucide-react"
 import { AnimatedNumber } from "@/components/web/AnimatedNumber"
 import { buildChartItems, CategoryBreakdown, SpendingChart } from "@/components/web/Chart"
 import { CategoryAvatar } from "@/components/web/Avatars"
-import { Group } from "@/components/web/Group"
+import { Group, Row } from "@/components/web/Group"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
-import { LogKind } from "@/lib/types"
-import { cn, haptic } from "@/lib/utils"
+import { Category, LogEntry, LogKind } from "@/lib/types"
+import { cn, formatMoney, haptic } from "@/lib/utils"
 import { useCategoriesByUsage, useMonthEntries } from "@/store/selectors"
 import { useLogStore } from "@/store/useChartStore"
 import { useUiStore } from "@/store/useUiStore"
@@ -102,6 +102,72 @@ function CategoryChips({ kind }: { kind: LogKind }) {
     )
 }
 
+// بودجهٔ ماهانهٔ هر دسته: چقدر از آن در این ماه خرج شده
+function Budgets({ entries, categories }: { entries: LogEntry[]; categories: Category[] }) {
+    const openAdd = useUiStore((s) => s.openAdd)
+
+    const rows = useMemo(() => {
+        const spent = new Map<string, number>()
+        for (const e of entries) if (e.mode === "decrease" && e.key) spent.set(e.key, (spent.get(e.key) ?? 0) + e.visitors)
+        return categories
+            .filter((c) => c.kind === "cost" && c.budget)
+            .map((c) => ({ category: c, budget: c.budget!, spent: spent.get(c.id) ?? 0 }))
+            .sort((a, b) => b.spent / b.budget - a.spent / a.budget)
+    }, [entries, categories])
+
+    if (rows.length === 0) return null
+
+    const totalBudget = rows.reduce((sum, r) => sum + r.budget, 0)
+    const totalSpent = rows.reduce((sum, r) => sum + r.spent, 0)
+
+    return (
+        <Group
+            title="بودجهٔ این ماه"
+            footer={`مجموع: ${formatMoney(totalSpent)} از ${formatMoney(totalBudget)} تومان`}
+        >
+            {rows.map(({ category, budget, spent }) => {
+                const over = spent > budget
+                const percent = Math.round((spent / budget) * 100)
+                return (
+                    <Row
+                        key={category.id}
+                        onClick={() => {
+                            haptic()
+                            openAdd("cost", category.id)
+                        }}
+                        leading={<CategoryAvatar label={category.label} color={category.color} size={32} />}
+                        title={category.label}
+                        subtitle={
+                            <span className="flex items-center gap-2">
+                                <span className="h-1 flex-1 overflow-hidden rounded-full bg-fill">
+                                    <span
+                                        className="block h-full origin-right rounded-full"
+                                        style={{
+                                            transform: `scaleX(${Math.min(spent / budget, 1)})`,
+                                            backgroundColor: over ? "var(--destructive)" : category.color,
+                                        }}
+                                    />
+                                </span>
+                                <span className={cn("num w-10 text-left", over && "text-destructive")}>
+                                    {percent.toLocaleString("fa-IR")}٪
+                                </span>
+                            </span>
+                        }
+                        trailing={
+                            <span className="text-left leading-tight">
+                                <span className={cn("num block text-[15px] font-semibold", over && "text-destructive")}>
+                                    {formatMoney(over ? spent - budget : budget - spent)}
+                                </span>
+                                <span className="block text-[12px] text-muted-foreground">{over ? "بیشتر از بودجه" : "مانده"}</span>
+                            </span>
+                        }
+                    />
+                )
+            })}
+        </Group>
+    )
+}
+
 function HomeSkeleton() {
     return (
         <div className="space-y-6 pt-2">
@@ -151,6 +217,7 @@ export function HomeView() {
                     ]}
                 />
                 <CategoryChips kind={kind} />
+                {kind === "cost" && <Budgets entries={entries} categories={categories} />}
                 <div className="overflow-hidden">
                     <SpendingChart key={kind} items={items} isCosts={kind === "cost"} />
                 </div>

@@ -24,6 +24,8 @@ export interface Category {
     kind: LogKind;
     label: string;
     color: string;
+    // بودجهٔ ماهانه (فقط دسته‌های هزینه)؛ null یعنی بدون بودجه
+    budget?: number | null;
 }
 
 export interface ChartItem {

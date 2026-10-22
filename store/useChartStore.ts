@@ -41,8 +41,8 @@ interface LogStore {
   updateLog: (entry: LogEntry) => void;
   removeLog: (id: string) => void;
 
-  addCategory: (kind: LogKind, label: string, color?: string) => void;
-  updateCategory: (id: string, changes: Partial<Pick<Category, "label" | "color">>) => void;
+  addCategory: (kind: LogKind, label: string, color?: string, budget?: number | null) => void;
+  updateCategory: (id: string, changes: Partial<Pick<Category, "label" | "color" | "budget">>) => void;
   removeCategory: (id: string) => void;
 }
 
@@ -201,7 +201,7 @@ export const useLogStore = create<LogStore>()((set, get) => {
       commit({ opId: newOpId(), type: "tx.delete", id });
     },
 
-    addCategory: (kind, label, color) => {
+    addCategory: (kind, label, color, budget) => {
       const trimmed = label.trim();
       if (!trimmed) return;
       const { categories } = get();
@@ -215,6 +215,7 @@ export const useLogStore = create<LogStore>()((set, get) => {
           kind,
           label: trimmed,
           color: color ?? suggestColor(categories.filter((c) => c.kind === kind).map((c) => c.color)),
+          budget: kind === "cost" ? budget || null : null,
         },
       });
     },
@@ -227,7 +228,8 @@ export const useLogStore = create<LogStore>()((set, get) => {
       const label = changes.label?.trim() || current.label;
       assertUniqueLabel(categories, current.kind, label, id);
 
-      commit({ opId: newOpId(), type: "cat.upsert", row: { ...current, ...changes, label } });
+      const budget = current.kind === "cost" ? (changes.budget !== undefined ? changes.budget : current.budget) || null : null;
+      commit({ opId: newOpId(), type: "cat.upsert", row: { ...current, ...changes, label, budget } });
     },
 
     removeCategory: (id) => {

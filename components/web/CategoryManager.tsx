@@ -11,11 +11,21 @@ import { Group, Row } from "@/components/web/Group"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { suggestColor } from "@/lib/palette"
 import { Category, LogKind } from "@/lib/types"
-import { haptic } from "@/lib/utils"
+import { formatAmountWords, formatMoney, haptic } from "@/lib/utils"
 import { useLogStore } from "@/store/useChartStore"
 import { toast } from "@/store/useToastStore"
 
 const FORM_ID = "category-form"
+
+// ارقام فارسی/عربی را هم می‌پذیرد و فقط عدد نگه می‌دارد
+function toDigits(value: string) {
+    return value
+        .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+        .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+        .replace(/\D/g, "")
+        .replace(/^0+/, "")
+        .slice(0, 15)
+}
 
 interface CategoryFormProps {
     kind: LogKind
@@ -34,12 +44,15 @@ function CategoryForm({ kind, category, onDone }: CategoryFormProps) {
     const [color, setColor] = useState(
         () => category?.color ?? suggestColor(categories.filter((c) => c.kind === kind).map((c) => c.color))
     )
+    const [budgetDigits, setBudgetDigits] = useState(category?.budget ? String(category.budget) : "")
     const [confirmDelete, setConfirmDelete] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     const usedCount = category ? entries.filter((e) => e.key === category.id).length : 0
     const trimmed = label.trim()
-    const unchanged = category && trimmed === category.label && color === category.color
+    const budget = kind === "cost" && budgetDigits ? Number(budgetDigits) : null
+    const unchanged =
+        category && trimmed === category.label && color === category.color && budget === (category.budget ?? null)
 
     const handleSubmit = (e: SubmitEvent) => {
         e.preventDefault()
@@ -49,8 +62,8 @@ function CategoryForm({ kind, category, onDone }: CategoryFormProps) {
             return
         }
         try {
-            if (category) updateCategory(category.id, { label: trimmed, color })
-            else addCategory(kind, trimmed, color)
+            if (category) updateCategory(category.id, { label: trimmed, color, budget })
+            else addCategory(kind, trimmed, color, budget)
             haptic([10, 40, 10])
             toast(category ? "دسته‌بندی ویرایش شد" : "دسته‌بندی اضافه شد", "success")
             onDone()
@@ -101,6 +114,30 @@ function CategoryForm({ kind, category, onDone }: CategoryFormProps) {
                             />
                         </div>
                     </Group>
+
+                    {kind === "cost" && (
+                        <Group
+                            title="بودجهٔ ماهانه"
+                            footer={
+                                budget
+                                    ? `${formatAmountWords(budget) || formatMoney(budget)} تومان در ماه`
+                                    : "اختیاری؛ اگر بگذاری، در خانه می‌بینی چقدر از آن خرج شده."
+                            }
+                        >
+                            <div className="flex items-center gap-3 px-4">
+                                <input
+                                    value={budget ? formatMoney(budget) : ""}
+                                    onChange={(e) => setBudgetDigits(toDigits(e.target.value))}
+                                    placeholder="بدون بودجه"
+                                    inputMode="numeric"
+                                    enterKeyHint="done"
+                                    aria-label="بودجهٔ ماهانه"
+                                    className="num h-[52px] min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-muted-foreground/70"
+                                />
+                                <span className="text-[15px] text-muted-foreground">تومان</span>
+                            </div>
+                        </Group>
+                    )}
 
                     <Group title="رنگ">
                         <ColorPicker value={color} onChange={setColor} />
@@ -176,6 +213,7 @@ export function CategoryManager() {
                                 onClick={() => openForm(category)}
                                 leading={<CategoryAvatar label={category.label} color={category.color} size={36} />}
                                 title={category.label}
+                                subtitle={category.budget ? `بودجه: ${formatMoney(category.budget)} تومان` : undefined}
                                 trailing={
                                     count > 0 && (
                                         <span className="num text-[13px] text-muted-foreground">{count.toLocaleString("fa-IR")}</span>
