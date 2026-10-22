@@ -13,6 +13,7 @@ import { WheelPicker } from "@/components/web/WheelPicker"
 import { navigate } from "@/lib/nav"
 import { LogEntry, LogKind } from "@/lib/types"
 import { addDays, cn, defaultEntryDate, haptic, isSameDay } from "@/lib/utils"
+import { useCategoriesByUsage } from "@/store/selectors"
 import { useLogStore } from "@/store/useChartStore"
 import { toast } from "@/store/useToastStore"
 import { useUiStore } from "@/store/useUiStore"
@@ -84,18 +85,17 @@ function Numpad({ onKey }: { onKey: (key: (typeof KEYS)[number]) => void }) {
 function TransactionForm() {
     const entry = useUiStore((s) => s.editing) ?? undefined
     const addKind = useUiStore((s) => s.addKind)
+    const addCategory = useUiStore((s) => s.addCategory)
     const setOpen = useUiStore((s) => s.setSheetOpen)
     const viewDate = useDateStore((s) => s.date) || new Date()
 
-    const allCategories = useLogStore((s) => s.categories)
-    const allEntries = useLogStore((s) => s.entries)
     const addLog = useLogStore((s) => s.addLog)
     const updateLog = useLogStore((s) => s.updateLog)
     const removeLog = useLogStore((s) => s.removeLog)
 
     const [kind, setKind] = useState<LogKind>(entry ? (entry.mode === "increase" ? "income" : "cost") : addKind)
     const [digits, setDigits] = useState(entry ? String(entry.visitors) : "")
-    const [selected, setSelected] = useState<string | null>(entry ? entry.key : null)
+    const [selected, setSelected] = useState<string | null>(entry ? entry.key : addCategory)
     const [date, setDate] = useState(() => entry?.date ?? defaultEntryDate(viewDate))
     const [description, setDescription] = useState(entry?.description ?? "")
     const [calendarOpen, setCalendarOpen] = useState(false)
@@ -106,15 +106,7 @@ function TransactionForm() {
     const entryKind = entry ? (entry.mode === "increase" ? "income" : "cost") : null
 
     // دسته‌های پرکاربردتر اول؛ اولی پیش‌فرض تراکنش جدید است
-    const items = useMemo(() => {
-        const counts = new Map<string, number>()
-        for (const e of allEntries) if (e.key) counts.set(e.key, (counts.get(e.key) ?? 0) + 1)
-        return allCategories
-            .filter((c) => c.kind === kind)
-            .map((c, i) => ({ c, i, n: counts.get(c.id) ?? 0 }))
-            .sort((a, b) => b.n - a.n || a.i - b.i)
-            .map(({ c }) => c)
-    }, [allCategories, allEntries, kind])
+    const items = useCategoriesByUsage(kind)
 
     const category =
         selected && items.some((c) => c.id === selected)

@@ -5,13 +5,14 @@ import { ArrowDown, ArrowUp, Plus } from "lucide-react"
 
 import { AnimatedNumber } from "@/components/web/AnimatedNumber"
 import { buildChartItems, SpendingChart } from "@/components/web/Chart"
+import { CategoryAvatar } from "@/components/web/Avatars"
 import { Group } from "@/components/web/Group"
 import { NavLink } from "@/components/web/NavLink"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { TransactionRow } from "@/components/web/TransactionRow"
 import { LogKind } from "@/lib/types"
 import { cn, haptic } from "@/lib/utils"
-import { useMonthEntries } from "@/store/selectors"
+import { useCategoriesByUsage, useMonthEntries } from "@/store/selectors"
 import { useLogStore } from "@/store/useChartStore"
 import { useUiStore } from "@/store/useUiStore"
 import useDateStore from "@/store/useYearStore"
@@ -71,6 +72,36 @@ function SummaryCard({ income, costs }: { income: number; costs: number }) {
     )
 }
 
+// دسترسی سریع: لمس هر دسته شیت ثبت را با همان دسته باز می‌کند
+function CategoryChips({ kind }: { kind: LogKind }) {
+    const openAdd = useUiStore((s) => s.openAdd)
+    const categories = useCategoriesByUsage(kind)
+    if (categories.length === 0) return null
+
+    return (
+        <div
+            data-no-swipe
+            className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+            {categories.map((c) => (
+                <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                        haptic()
+                        openAdd(kind, c.id)
+                    }}
+                    aria-label={`ثبت ${kind === "income" ? "درآمد" : "هزینه"} در ${c.label}`}
+                    className="press flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-card ps-1.5 pe-3.5 text-[14px] font-medium"
+                >
+                    <CategoryAvatar label={c.label} color={c.color} size={24} />
+                    <span className="max-w-32 truncate">{c.label}</span>
+                </button>
+            ))}
+        </div>
+    )
+}
+
 function HomeSkeleton() {
     return (
         <div className="space-y-6">
@@ -125,6 +156,7 @@ export function HomeView() {
                         { value: "income", label: "درآمدها" },
                     ]}
                 />
+                <CategoryChips kind={kind} />
                 <div className="overflow-hidden rounded-xl bg-card">
                     <SpendingChart key={kind} items={items} isCosts={kind === "cost"} />
                 </div>
