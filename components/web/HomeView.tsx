@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { ArrowDown, ArrowUp } from "lucide-react"
+import { ArrowDown, ArrowUp, Plus } from "lucide-react"
 
 import { AnimatedNumber } from "@/components/web/AnimatedNumber"
 import { buildChartItems, CategoryBreakdown, SpendingChart } from "@/components/web/Chart"
@@ -16,11 +16,19 @@ import { useUiStore } from "@/store/useUiStore"
 import useDateStore from "@/store/useYearStore"
 
 function Stat({ label, value, kind }: { label: string; value: number; kind: LogKind }) {
+    const openAdd = useUiStore((s) => s.openAdd)
     const Icon = kind === "income" ? ArrowDown : ArrowUp
     return (
-        <div className="flex min-w-0 items-center gap-2.5 px-4 py-3">
+        <button
+            type="button"
+            onClick={() => {
+                haptic()
+                openAdd(kind)
+            }}
+            aria-label={`ثبت ${label}`}
+            className="press-row flex min-w-0 items-center gap-2.5 px-4 py-3 text-right"
+        >
             <span
-                aria-hidden
                 className={cn(
                     "grid size-8 shrink-0 place-items-center rounded-full",
                     kind === "income" ? "bg-success/12 text-success" : "bg-fill text-foreground"
@@ -30,47 +38,29 @@ function Stat({ label, value, kind }: { label: string; value: number; kind: LogK
             </span>
             <div className="min-w-0 flex-1">
                 <p className="text-[12px] text-muted-foreground">{label}</p>
-                <p className={cn("truncate text-[15px] font-semibold", kind === "income" && "text-success")}>
+                <p className="truncate text-[15px] font-semibold">
                     <AnimatedNumber value={value} />
                 </p>
             </div>
-        </div>
+            <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-tint text-primary">
+                <Plus className="size-4" strokeWidth={2.4} />
+            </span>
+        </button>
     )
 }
 
-// خلاصهٔ ماه: مانده، درآمد و هزینه، و اینکه چه سهمی از درآمد خرج شده
+
 function SummaryCard({ income, costs }: { income: number; costs: number }) {
     const balance = income - costs
-    const spent = income > 0 ? Math.round((costs / income) * 100) : null
 
     return (
-        <section aria-label="خلاصهٔ این ماه" className="overflow-hidden rounded-xl bg-card">
+        <section className="overflow-hidden rounded-xl bg-card">
             <div className="px-4 pt-4 pb-3">
                 <p className="text-[13px] text-muted-foreground">مانده این ماه</p>
                 <p className={cn("mt-0.5 text-[34px] leading-tight font-bold", balance < 0 && "text-destructive")}>
                     <AnimatedNumber value={balance} />
                     <span className="ms-1.5 text-[15px] font-medium text-muted-foreground">تومان</span>
                 </p>
-                {spent !== null && (
-                    <div className="mt-3 space-y-1.5">
-                        <div
-                            role="meter"
-                            aria-label="سهم هزینه از درآمد"
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-valuenow={Math.min(spent, 100)}
-                            className="h-1.5 overflow-hidden rounded-full bg-fill"
-                        >
-                            <div
-                                className={cn("h-full rounded-full", spent > 100 ? "bg-destructive" : "bg-primary")}
-                                style={{ width: `${Math.min(spent, 100)}%` }}
-                            />
-                        </div>
-                        <p className="text-[12px] text-muted-foreground">
-                            <span className="num">{spent.toLocaleString("fa-IR")}٪</span> درآمد این ماه خرج شده
-                        </p>
-                    </div>
-                )}
             </div>
             <div className="grid grid-cols-2 border-t border-separator [&>:first-child]:border-e [&>:first-child]:border-separator">
                 <Stat label="درآمد" value={income} kind="income" />
@@ -91,7 +81,6 @@ function CategoryChips({ kind }: { kind: LogKind }) {
 
     return (
         <section>
-            <h2 className="mb-1.5 px-4 text-[13px] text-muted-foreground">ثبت سریع {kindLabel}</h2>
             <div className="flex flex-wrap gap-2">
                 {categories.map((c) => (
                     <button
@@ -151,10 +140,8 @@ export function HomeView() {
 
     return (
         <div className="space-y-6 pt-2">
-            {/* نمای کلی ماه به نوع انتخاب‌شده بستگی ندارد، پس بالای سوییچ می‌آید */}
-            <SummaryCard income={income} costs={costs} />
-
             <div className="space-y-6">
+                <SummaryCard income={income} costs={costs} />
                 <SegmentedControl
                     value={kind}
                     onChange={setKind}
@@ -164,14 +151,12 @@ export function HomeView() {
                     ]}
                 />
                 <CategoryChips kind={kind} />
-                <div className="overflow-hidden rounded-xl bg-card">
+                <div className="overflow-hidden">
                     <SpendingChart key={kind} items={items} isCosts={kind === "cost"} />
                 </div>
             </div>
-
-            {/* ریز دسته‌ها ممکن است بلند باشد؛ آخر صفحه تا چیزی را پایین هل ندهد */}
             {items.length > 0 && (
-                <Group title={`ریز ${kind === "cost" ? "هزینه‌ها" : "درآمدها"}`}>
+                <Group>
                     <CategoryBreakdown key={kind} items={items} />
                 </Group>
             )}
