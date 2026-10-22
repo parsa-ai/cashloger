@@ -10,10 +10,12 @@ import { Dialog, DialogBody, DialogContent, DialogNav } from '@/components/ui/di
 import { PasswordField } from '@/components/ui/password-field'
 import { UserBlob } from '@/components/web/Avatars'
 import { ExportSheet } from '@/components/web/ExportSheet'
+import { ReminderSettings } from '@/components/web/Reminders'
 import { Group, IconTile, Row } from '@/components/web/Group'
 import { useBlobName, useProfile } from '@/components/web/ProfileProvider'
 import { ThemeSettings } from '@/components/web/ThemeSettings'
 import { cleanUsername, useUsernameAvailability } from '@/hooks/useUsernameAvailability'
+import { disablePush } from '@/lib/push'
 import { createClient } from '@/lib/supabase/client'
 import { haptic } from '@/lib/utils'
 import { useLogStore } from '@/store/useChartStore'
@@ -249,6 +251,7 @@ export function UserView() {
       haptic()
       return
     }
+    await disablePush()
     await supabase.auth.signOut()
     reset(true)
     router.push('/login')
@@ -288,6 +291,8 @@ export function UserView() {
           chevron
         />
       </Group>
+
+      <ReminderSettings />
 
       <ThemeSettings />
 

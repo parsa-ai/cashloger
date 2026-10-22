@@ -36,8 +36,10 @@ export async function updateSession(request: NextRequest) {
 
   const isAuthPage = request.nextUrl.pathname.startsWith('/login')
   const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/')
+  // کرون با توکن خودش احراز می‌شود، نه با نشست کاربر
+  const isCron = request.nextUrl.pathname.startsWith('/api/cron/')
 
-  if (isAuthCallback) {
+  if (isAuthCallback || isCron) {
     return supabaseResponse
   }
 

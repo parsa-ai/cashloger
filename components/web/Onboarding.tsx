@@ -1,14 +1,17 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Plus } from "lucide-react"
+import { Check, Loader2, Plus } from "lucide-react"
 import { happy } from "blobatar/expression"
 
 import { Button } from "@/components/ui/button"
 import { UserBlob } from "@/components/web/Avatars"
+import { ReminderPicker, applyReminders, pushStatusHint } from "@/components/web/Reminders"
 import { useBlobName } from "@/components/web/ProfileProvider"
 import { BASE_CATEGORIES, BaseCategory, MIN_ONBOARDING_CATEGORIES } from "@/lib/categories"
 import { suggestColor } from "@/lib/palette"
+import { pushStatus } from "@/lib/push"
+import { DEFAULT_REMINDERS } from "@/lib/reminders"
 import { LogKind } from "@/lib/types"
 import { cn, haptic } from "@/lib/utils"
 import { useLogStore } from "@/store/useChartStore"
@@ -16,7 +19,7 @@ import { toast } from "@/store/useToastStore"
 
 const keyOf = (c: BaseCategory) => `${c.kind}:${c.label}`
 
-// کاربر تازه‌وارد (بدون هیچ دسته و تراکنشی) اول دسته‌هایش را انتخاب می‌کند
+// کاربر تازه‌وارد (بدون هیچ دسته و تراکنشی) اول دسته‌هایش را انتخاب می‌کند، بعد ساعت یادآوری را
 export function Onboarding() {
     const needed = useLogStore(
         (s) =>
@@ -27,10 +30,65 @@ export function Onboarding() {
             s.entries.length === 0 &&
             s.queue.length === 0
     )
-    const [done, setDone] = useState(false)
+    const [step, setStep] = useState<"categories" | "reminders" | "done">("categories")
 
-    if (!needed || done) return null
-    return <OnboardingScreen onDone={() => setDone(true)} />
+    // بعد از ساختن دسته‌ها «needed» دیگر برقرار نیست؛ مرحلهٔ یادآوری مستقل از آن می‌ماند
+    if (step === "reminders") return <ReminderStep onDone={() => setStep("done")} />
+    if (!needed || step === "done") return null
+    return <OnboardingScreen onDone={() => setStep("reminders")} />
+}
+
+function ReminderStep({ onDone }: { onDone: () => void }) {
+    const blobName = useBlobName()
+    const userId = useLogStore((s) => s.userId)
+    const [times, setTimes] = useState(DEFAULT_REMINDERS)
+    const [isSaving, setIsSaving] = useState(false)
+    const [hint] = useState(() => pushStatusHint(pushStatus()))
+
+    const finish = async () => {
+        if (!userId || times.length === 0) return
+        setIsSaving(true)
+        try {
+            const status = await applyReminders(userId, times)
+            haptic([10, 40, 10])
+            toast(status === "granted" ? "یادآوری روشن شد" : "ساعت‌ها ذخیره شد", "success")
+            onDone()
+        } catch {
+            toast("ذخیره نشد؛ بعداً از صفحهٔ حساب روشنش کن", "error")
+            onDone()
+        }
+    }
+
+    return (
+        <div className="fixed inset-0 z-[55] flex animate-page-in flex-col bg-background">
+            <div className="no-scrollbar flex-1 overflow-y-auto px-4 pt-[calc(env(safe-area-inset-top)+32px)] pb-6">
+                <div className="mx-auto max-w-md space-y-8">
+                    <header className="flex flex-col items-center text-center">
+                        <UserBlob name={blobName} size={80} expression={happy} />
+                        <h1 className="mt-4 text-[24px] font-bold">کی یادت بندازیم؟</h1>
+                        <p className="mt-1.5 text-[15px] leading-6 text-muted-foreground">
+                            هر روز این ساعت‌ها یه اعلان می‌فرستیم که خرج و دخلت یادت نره.
+                            <br />
+                            از صفحهٔ حساب هم می‌تونی عوضشون کنی.
+                        </p>
+                    </header>
+                    <ReminderPicker value={times} onChange={setTimes} />
+                    {hint && <p className="px-1 text-[13px] leading-5 text-muted-foreground">{hint}</p>}
+                </div>
+            </div>
+
+            <div className="space-y-1 border-t border-separator bg-background px-4 pt-3 pb-[max(env(safe-area-inset-bottom),16px)]">
+                <div className="mx-auto max-w-md space-y-1">
+                    <Button size="lg" className="w-full" disabled={isSaving || times.length === 0} onClick={finish}>
+                        {isSaving ? <Loader2 className="animate-spin" /> : times.length ? "یادم بنداز" : "یه ساعت انتخاب کن"}
+                    </Button>
+                    <Button variant="plain" className="w-full text-muted-foreground" disabled={isSaving} onClick={onDone}>
+                        فعلاً نه
+                    </Button>
+                </div>
+            </div>
+        </div>
+    )
 }
 
 function OnboardingScreen({ onDone }: { onDone: () => void }) {

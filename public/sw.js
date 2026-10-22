@@ -1,7 +1,7 @@
 // سرویس‌ورکر کش لاگر: صفحات و فایل‌های برنامه را کش می‌کند تا بدون اینترنت هم باز شود.
 // داده‌ها جدا از این فایل، در حافظهٔ دستگاه و صف همگام‌سازی نگه داشته می‌شوند.
 
-const VERSION = "v3";
+const VERSION = "v4";
 const SHELL_CACHE = `shell-${VERSION}`;
 const STATIC_CACHE = `static-${VERSION}`;
 const PAGES_CACHE = `pages-${VERSION}`;
@@ -109,4 +109,44 @@ self.addEventListener("fetch", (event) => {
     if (url.pathname.startsWith("/_next/static/") || SHELL_FILES.includes(url.pathname)) {
         event.respondWith(handleStatic(request));
     }
+});
+
+// یادآوری روزانه (app/api/cron/reminders)
+self.addEventListener("push", (event) => {
+    let data = {};
+    try {
+        data = event.data ? event.data.json() : {};
+    } catch {
+        data = { body: event.data && event.data.text() };
+    }
+    event.waitUntil(
+        self.registration.showNotification(data.title || "کش لاگر", {
+            body: data.body || "تراکنش‌های امروز رو ثبت کردی؟",
+            icon: "/web-app-manifest-192x192.png",
+            badge: "/favicon-96x96.png",
+            // یادآوری تازه جای قبلی را می‌گیرد، روی هم انباشته نمی‌شوند
+            tag: "daily-reminder",
+            lang: "fa",
+            dir: "rtl",
+            data: { url: data.url || "/?add=1" },
+        })
+    );
+});
+
+// لمس اعلان: برنامهٔ باز را جلو می‌آورد و شیت ثبت را باز می‌کند، وگرنه برنامه را باز می‌کند
+self.addEventListener("notificationclick", (event) => {
+    event.notification.close();
+    const url = (event.notification.data && event.notification.data.url) || "/?add=1";
+    event.waitUntil(
+        (async () => {
+            const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+            const client = windows.find((c) => new URL(c.url).origin === self.location.origin);
+            if (client) {
+                await client.focus();
+                client.postMessage({ type: "OPEN_ADD" });
+                return;
+            }
+            await self.clients.openWindow(url);
+        })()
+    );
 });

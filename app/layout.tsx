@@ -10,6 +10,7 @@ import { AppHeader } from "@/components/web/AppHeader";
 import { InstallPrompt } from "@/components/web/InstallPrompt";
 import { Onboarding } from "@/components/web/Onboarding";
 import { ProfileProvider } from "@/components/web/ProfileProvider";
+import { ReminderBridge } from "@/components/web/Reminders";
 import { TransactionSheetHost } from "@/components/web/TransactionSheet";
 import { SwipeNav } from "@/components/web/SwipeNav";
 import { TabBar } from "@/components/web/TabBar";
@@ -93,6 +94,7 @@ export default async function RootLayout({
                   <TabBar />
                   <TransactionSheetHost />
                   <Onboarding />
+                  <ReminderBridge />
                 </div>
               ) : (
                 children
