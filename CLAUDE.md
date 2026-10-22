@@ -16,7 +16,7 @@ Package manager is pnpm.
 There is no test suite. Verify changes with `pnpm lint` and `pnpm build`, and by running the app.
 
 Env (`.env`, git-ignored): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and
-`SUPABASE_SERVICE_ROLE_KEY`/secret key for `lib/supabase/admin.ts` (server only).
+`SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` for `lib/supabase/admin.ts` (server only).
 
 ## Architecture
 
