@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
-import { CalendarDays, Delete, PencilLine, Plus, Trash2 } from "lucide-react"
+import { CalendarDays, Check, Delete, PencilLine, Plus, Trash2 } from "lucide-react"
 import { Popover } from "radix-ui"
 
 import { Button } from "@/components/ui/button"
@@ -211,8 +211,8 @@ function TransactionForm() {
                     />
                 }
                 action={
-                    <Button type="button" size="sm" className="h-9 rounded-full px-4 text-[15px]" disabled={amount <= 0} onClick={submit}>
-                        ذخیره
+                    <Button type="button" size="icon" aria-label="ذخیره" disabled={amount <= 0} onClick={submit}>
+                        <Check />
                     </Button>
                 }
             />

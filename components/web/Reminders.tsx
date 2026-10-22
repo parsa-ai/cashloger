@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Bell, Check, Loader2, Plus } from "lucide-react"
+import { Bell, Check, Loader2, Plus, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogContent, DialogNav } from "@/components/ui/dialog"
@@ -125,11 +125,11 @@ export function ReminderPicker({ value, onChange }: { value: number[]; onChange:
                         />
                     </div>
                     <div className="flex gap-2">
-                        <Button variant="secondary" className="flex-1" onClick={() => setCustom(false)}>
-                            انصراف
+                        <Button variant="secondary" size="icon" className="size-11" aria-label="انصراف" onClick={() => setCustom(false)}>
+                            <X />
                         </Button>
-                        <Button className="flex-1" onClick={addCustom}>
-                            افزودن <span className="num">{formatTime(hour * 60 + minute)}</span>
+                        <Button className="flex-1" aria-label={`افزودن ${formatTime(hour * 60 + minute)}`} onClick={addCustom}>
+                            <Check /> <span className="num">{formatTime(hour * 60 + minute)}</span>
                         </Button>
                     </div>
                 </div>
@@ -193,8 +193,8 @@ function ReminderSheet({
                 <DialogNav
                     title="یادآوری روزانه"
                     action={
-                        <Button variant="plain" size="nav" onClick={save} disabled={isSaving}>
-                            {isSaving ? <Loader2 className="animate-spin" /> : "ذخیره"}
+                        <Button size="icon" aria-label="ذخیره" onClick={save} disabled={isSaving}>
+                            {isSaving ? <Loader2 className="animate-spin" /> : <Check />}
                         </Button>
                     }
                 />

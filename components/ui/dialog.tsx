@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { X } from "lucide-react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
@@ -77,7 +78,6 @@ function DialogContent({
 // نوار بالای شیت: دکمهٔ تأیید سمت راست، عنوان وسط، لغو سمت چپ
 function DialogNav({
   title,
-  cancelLabel = "انصراف",
   action,
   center,
   className,
@@ -85,7 +85,6 @@ function DialogNav({
   title: React.ReactNode
   // به‌جای عنوان، کنترلی وسط نوار (عنوان برای صفحه‌خوان می‌ماند)
   center?: React.ReactNode
-  cancelLabel?: React.ReactNode
   action?: React.ReactNode
   className?: string
 }) {
@@ -101,8 +100,11 @@ function DialogNav({
       ) : (
         <DialogPrimitive.Title className="truncate text-[17px] font-semibold">{title}</DialogPrimitive.Title>
       )}
-      <DialogPrimitive.Close className="press justify-self-end text-[15px] text-muted-foreground outline-none">
-        {cancelLabel}
+      <DialogPrimitive.Close
+        aria-label="انصراف"
+        className="press inline-flex size-9 items-center justify-center justify-self-end rounded-full bg-fill text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      >
+        <X className="size-[18px]" />
       </DialogPrimitive.Close>
     </div>
   )

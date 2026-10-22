@@ -1,7 +1,7 @@
 "use client"
 
 import { SubmitEvent, useMemo, useState } from "react"
-import { Plus } from "lucide-react"
+import { Check, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogContent, DialogNav } from "@/components/ui/dialog"
@@ -77,8 +77,8 @@ function CategoryForm({ kind, category, onDone }: CategoryFormProps) {
             <DialogNav
                 title={category ? "ویرایش دسته" : kind === "cost" ? "دستهٔ هزینهٔ جدید" : "دستهٔ درآمد جدید"}
                 action={
-                    <Button type="submit" form={FORM_ID} variant="plain" size="nav" disabled={!trimmed}>
-                        {category ? "ذخیره" : "افزودن"}
+                    <Button type="submit" form={FORM_ID} size="icon" aria-label={category ? "ذخیره" : "افزودن"} disabled={!trimmed}>
+                        <Check />
                     </Button>
                 }
             />

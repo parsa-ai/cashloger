@@ -68,8 +68,8 @@ function PasswordSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o
         <DialogNav
           title="تغییر رمز عبور"
           action={
-            <Button type="submit" form={PASSWORD_FORM_ID} variant="plain" size="nav" disabled={isSaving || !newPassword}>
-              {isSaving ? <Loader2 className="animate-spin" /> : 'ذخیره'}
+            <Button type="submit" form={PASSWORD_FORM_ID} size="icon" aria-label="ذخیره" disabled={isSaving || !newPassword}>
+              {isSaving ? <Loader2 className="animate-spin" /> : <Check />}
             </Button>
           }
         />
@@ -162,11 +162,11 @@ function UsernameSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o
             <Button
               type="submit"
               form={USERNAME_FORM_ID}
-              variant="plain"
-              size="nav"
+              size="icon"
+              aria-label="ذخیره"
               disabled={isSaving || value === current || availability !== 'free'}
             >
-              {isSaving ? <Loader2 className="animate-spin" /> : 'ذخیره'}
+              {isSaving ? <Loader2 className="animate-spin" /> : <Check />}
             </Button>
           }
         />
