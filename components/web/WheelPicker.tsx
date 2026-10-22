@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef } from "react"
 import { cn, haptic } from "@/lib/utils"
 
-const ROW = 38
+const ROW = 34
 // تعداد ردیف‌های دیده‌شده؛ فرد تا یکی دقیقاً وسط باشد (۳ تا تا جمع‌وجور بماند)
 const VISIBLE = 3
 const PAD = ((VISIBLE - 1) / 2) * ROW
@@ -130,7 +130,7 @@ export function WheelPicker<T>({
     return (
         <div className={cn("relative", className)} style={{ height: VISIBLE * ROW }}>
             {/* نوار انتخاب وسط */}
-            <div aria-hidden className="pointer-events-none absolute inset-x-0 rounded-lg bg-card" style={{ top: PAD, height: ROW }} />
+            <div aria-hidden className="pointer-events-none absolute inset-x-2 rounded-lg bg-fill" style={{ top: PAD, height: ROW }} />
             <div
                 ref={scrollRef}
                 role="listbox"

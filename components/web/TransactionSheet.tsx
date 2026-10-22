@@ -12,7 +12,7 @@ import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { WheelPicker } from "@/components/web/WheelPicker"
 import { navigate } from "@/lib/nav"
 import { LogEntry, LogKind } from "@/lib/types"
-import { addDays, cn, defaultEntryDate, formatAmountWords, haptic, isSameDay } from "@/lib/utils"
+import { addDays, cn, defaultEntryDate, haptic, isSameDay } from "@/lib/utils"
 import { useLogStore } from "@/store/useChartStore"
 import { toast } from "@/store/useToastStore"
 import { useUiStore } from "@/store/useUiStore"
@@ -55,10 +55,10 @@ function pushDigits(digits: string, add: string) {
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "000", "0", "back"] as const
 
-// صفحه‌کلید عددی؛ چیدمان مثل ماشین‌حساب گوشی (۱ بالا چپ)
+// صفحه‌کلید عددی ساده (بدون کاشی، مثل شماره‌گیر گوشی)؛ ۱ بالا چپ
 function Numpad({ onKey }: { onKey: (key: (typeof KEYS)[number]) => void }) {
     return (
-        <div dir="ltr" className="grid grid-cols-3 gap-2">
+        <div dir="ltr" className="grid grid-cols-3">
             {KEYS.map((key) => (
                 <button
                     key={key}
@@ -68,7 +68,7 @@ function Numpad({ onKey }: { onKey: (key: (typeof KEYS)[number]) => void }) {
                         haptic(4)
                         onKey(key)
                     }}
-                    className="press num grid h-[52px] place-items-center rounded-xl bg-card text-[24px] font-medium select-none"
+                    className="press num grid h-12 place-items-center rounded-xl text-[26px] font-medium select-none active:bg-fill"
                 >
                     {key === "back" ? (
                         <Delete className="size-6 text-muted-foreground" />
@@ -192,12 +192,24 @@ function TransactionForm() {
         return () => window.removeEventListener("keydown", onKeyDown)
     }, [])
 
-    const words = formatAmountWords(amount)
-
     return (
         <>
             <DialogNav
                 title={entry ? `ویرایش ${noun}` : `${noun} جدید`}
+                center={
+                    <SegmentedControl
+                        value={kind}
+                        onChange={(k) => {
+                            setKind(k)
+                            setSelected(null)
+                        }}
+                        options={[
+                            { value: "cost", label: "هزینه" },
+                            { value: "income", label: "درآمد" },
+                        ]}
+                        className="h-9 w-44 text-[14px]"
+                    />
+                }
                 action={
                     <Button type="button" size="sm" className="h-9 rounded-full px-4 text-[15px]" disabled={amount <= 0} onClick={submit}>
                         ذخیره
@@ -205,131 +217,118 @@ function TransactionForm() {
                 }
             />
 
-            <div className="no-scrollbar flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pt-1 pb-3">
-                <SegmentedControl
-                    value={kind}
-                    onChange={(k) => {
-                        setKind(k)
-                        setSelected(null)
-                    }}
-                    options={[
-                        { value: "cost", label: "هزینه" },
-                        { value: "income", label: "درآمد" },
-                    ]}
-                />
+            {/* همه‌چیز بدون اسکرول در یک صفحه جا می‌شود */}
+            <div className="flex min-h-0 flex-1 flex-col gap-3 px-4 pb-2">
+                {/* ۱) مبلغ: بزرگ‌ترین چیز صفحه */}
+                <p className="flex h-[68px] items-center justify-center gap-2" aria-live="polite">
+                    <span
+                        className={cn(
+                            "num leading-none font-bold tracking-tight transition-colors duration-200",
+                            digits.length > 9 ? "text-[38px]" : "text-[48px]",
+                            amount === 0 ? "text-muted-foreground/35" : !isCost && "text-success"
+                        )}
+                    >
+                        {amount.toLocaleString("fa-IR")}
+                    </span>
+                    <span className="text-[15px] font-medium text-muted-foreground">تومان</span>
+                </p>
 
-                {/* ۱) مبلغ: مهم‌ترین چیز صفحه */}
-                <div className="flex flex-col items-center py-1" aria-live="polite">
-                    <p className="flex items-baseline gap-2">
-                        <span
-                            className={cn(
-                                "num leading-none font-bold tracking-tight transition-colors duration-200",
-                                digits.length > 9 ? "text-[36px]" : "text-[46px]",
-                                amount === 0 ? "text-muted-foreground/40" : !isCost && "text-success"
-                            )}
-                        >
-                            {amount.toLocaleString("fa-IR")}
-                        </span>
-                        <span className="text-[16px] font-medium text-muted-foreground">تومان</span>
-                    </p>
-                    <p className="mt-1.5 h-5 text-[13px] text-muted-foreground">{words && `${words} تومان`}</p>
-                </div>
-
-                {/* ۲) دسته: چرخ انتخاب با آیکون هر دسته، پرکاربردها اول */}
-                <div className="space-y-1">
-                    <div className="flex items-center justify-between px-1">
-                        <span className="text-[13px] text-muted-foreground">دسته</span>
+                {/* ۲) جزئیات در یک کارت: دسته (چرخ)، بعد تاریخ و توضیح */}
+                <div className="overflow-hidden rounded-2xl bg-card">
+                    <div className="flex items-center">
+                        {chips.length > 0 ? (
+                            <WheelPicker
+                                key={kind}
+                                label="دسته"
+                                items={chips}
+                                value={category ?? NONE}
+                                getKey={(c) => c.id}
+                                onChange={(id) => setSelected(id === NONE ? null : id)}
+                                render={(c, active) => (
+                                    <>
+                                        <CategoryAvatar label={c.label} color={c.color} size={24} />
+                                        <span className={cn("truncate", active && "font-semibold")}>{c.label}</span>
+                                    </>
+                                )}
+                                className="min-w-0 flex-1"
+                            />
+                        ) : (
+                            <p className="flex-1 py-4 text-center text-[14px] text-muted-foreground">هنوز دسته‌ای نداری</p>
+                        )}
                         <button
                             type="button"
+                            aria-label="دستهٔ جدید"
                             onClick={() => {
                                 close()
                                 navigate("/categories")
                             }}
-                            className="press flex items-center gap-1 text-[13px] font-medium text-primary"
+                            className="press me-2 grid size-9 shrink-0 place-items-center rounded-full bg-tint text-primary"
                         >
-                            <Plus className="size-3.5" />
-                            دسته جدید
+                            <Plus className="size-[18px]" />
                         </button>
                     </div>
-                    {chips.length > 0 && (
-                        <WheelPicker
-                            key={kind}
-                            label="دسته"
-                            items={chips}
-                            value={category ?? NONE}
-                            getKey={(c) => c.id}
-                            onChange={(id) => setSelected(id === NONE ? null : id)}
-                            render={(c, active) => (
-                                <>
-                                    <CategoryAvatar label={c.label} color={c.color} size={26} />
-                                    <span className={cn("truncate", active && "font-semibold")}>{c.label}</span>
-                                </>
-                            )}
-                        />
-                    )}
-                </div>
 
-                {/* ۳) جزئیات: تاریخ، توضیح، حذف */}
-                <div className="flex items-center gap-2">
-                    {/* تقویم در یک پاپ‌اور شناور روی شیت باز می‌شود */}
-                    <Popover.Root open={calendarOpen} onOpenChange={setCalendarOpen}>
-                        <Popover.Trigger asChild>
+                    <div className="flex h-11 items-center border-t border-separator">
+                        {/* تقویم در یک پاپ‌اور شناور روی شیت باز می‌شود */}
+                        <Popover.Root open={calendarOpen} onOpenChange={setCalendarOpen}>
+                            <Popover.Trigger asChild>
+                                <button
+                                    type="button"
+                                    onClick={() => haptic()}
+                                    className={cn(
+                                        "press flex h-full shrink-0 items-center gap-1.5 border-e border-separator px-4 text-[14px] font-medium transition-colors duration-200",
+                                        calendarOpen && "text-primary"
+                                    )}
+                                >
+                                    <CalendarDays className="size-4 text-muted-foreground" />
+                                    <span key={date.toDateString()} className="animate-fade-in">{shortDay(date)}</span>
+                                </button>
+                            </Popover.Trigger>
+                            <Popover.Portal>
+                                <Popover.Content
+                                    side="top"
+                                    align="start"
+                                    sideOffset={8}
+                                    collisionPadding={16}
+                                    className="z-[60] w-[min(340px,calc(100vw-32px))] origin-(--radix-popover-content-transform-origin) overflow-hidden rounded-2xl shadow-float outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+                                >
+                                    <PersianCalendar
+                                        value={date}
+                                        onChange={(d) => {
+                                            setDate(d)
+                                            setCalendarOpen(false)
+                                        }}
+                                    />
+                                </Popover.Content>
+                            </Popover.Portal>
+                        </Popover.Root>
+                        <label className="flex h-full min-w-0 flex-1 items-center gap-2 px-4">
+                            <PencilLine className="size-4 shrink-0 text-muted-foreground" />
+                            <input
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                onFocus={() => setCalendarOpen(false)}
+                                onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
+                                placeholder="توضیح (اختیاری)"
+                                maxLength={500}
+                                enterKeyHint="done"
+                                className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground/70"
+                            />
+                        </label>
+                        {entry && (
                             <button
                                 type="button"
-                                onClick={() => haptic()}
-                                className={cn(
-                                    "press flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-medium transition-colors duration-200",
-                                    calendarOpen ? "bg-primary text-primary-foreground" : "bg-card"
-                                )}
+                                aria-label="حذف تراکنش"
+                                onClick={handleDelete}
+                                className="press grid h-full shrink-0 place-items-center border-s border-separator px-4 text-destructive"
                             >
-                                <CalendarDays className="size-4" />
-                                <span key={date.toDateString()} className="animate-fade-in">{shortDay(date)}</span>
+                                <Trash2 className="size-[18px]" />
                             </button>
-                        </Popover.Trigger>
-                        <Popover.Portal>
-                            <Popover.Content
-                                side="top"
-                                align="start"
-                                sideOffset={8}
-                                collisionPadding={16}
-                                className="z-[60] w-[min(340px,calc(100vw-32px))] origin-(--radix-popover-content-transform-origin) overflow-hidden rounded-2xl shadow-float outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
-                            >
-                                <PersianCalendar
-                                    value={date}
-                                    onChange={(d) => {
-                                        setDate(d)
-                                        setCalendarOpen(false)
-                                    }}
-                                />
-                            </Popover.Content>
-                        </Popover.Portal>
-                    </Popover.Root>
-                    <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-full bg-card px-3.5">
-                        <PencilLine className="size-4 shrink-0 text-muted-foreground" />
-                        <input
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            onFocus={() => setCalendarOpen(false)}
-                            onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
-                            placeholder="توضیح (اختیاری)"
-                            maxLength={500}
-                            enterKeyHint="done"
-                            className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground/70"
-                        />
-                    </label>
-                    {entry && (
-                        <button
-                            type="button"
-                            aria-label="حذف تراکنش"
-                            onClick={handleDelete}
-                            className="press grid size-10 shrink-0 place-items-center rounded-full bg-destructive/10 text-destructive"
-                        >
-                            <Trash2 className="size-[18px]" />
-                        </button>
-                    )}
+                        )}
+                    </div>
                 </div>
 
-                {/* ۴) صفحه‌کلید عددی */}
+                {/* ۳) صفحه‌کلید عددی */}
                 <Numpad onKey={pressKey} />
             </div>
         </>

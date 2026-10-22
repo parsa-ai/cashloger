@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Vazirmatn } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import AppShell from "@/components/web/AppShell";
@@ -64,7 +65,10 @@ export default async function RootLayout({
   return (
     <html lang="fa" dir="rtl" suppressHydrationWarning className={vazirmatn.variable}>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: colorThemeScript + installPromptScript }} />
+        {/* قبل از اجرای React؛ با next/script تا React دربارهٔ تگ script هشدار ندهد */}
+        <Script id="boot" strategy="beforeInteractive">
+          {colorThemeScript + installPromptScript}
+        </Script>
       </head>
       <body className="font-sans">
         <ThemeProvider

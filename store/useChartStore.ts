@@ -109,7 +109,8 @@ export const useLogStore = create<LogStore>()((set, get) => {
 
   return {
     ...emptyState,
-    isOnline: typeof navigator === "undefined" ? true : navigator.onLine,
+    // سرور همیشه «آنلاین» رندر می‌کند؛ وضعیت واقعی بعد از mount در DataLoader خوانده می‌شود تا hydration یکی باشد
+    isOnline: true,
 
     init: (userId) => {
       if (get().userId === userId) {

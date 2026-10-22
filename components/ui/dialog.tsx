@@ -79,9 +79,12 @@ function DialogNav({
   title,
   cancelLabel = "انصراف",
   action,
+  center,
   className,
 }: {
   title: React.ReactNode
+  // به‌جای عنوان، کنترلی وسط نوار (عنوان برای صفحه‌خوان می‌ماند)
+  center?: React.ReactNode
   cancelLabel?: React.ReactNode
   action?: React.ReactNode
   className?: string
@@ -90,7 +93,14 @@ function DialogNav({
     <div className={cn("grid h-12 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 px-4", className)}>
       {/* راست‌به‌چپ: ستون اول سمت راست است */}
       <div className="justify-self-start">{action}</div>
-      <DialogPrimitive.Title className="truncate text-[17px] font-semibold">{title}</DialogPrimitive.Title>
+      {center ? (
+        <div className="min-w-0">
+          <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
+          {center}
+        </div>
+      ) : (
+        <DialogPrimitive.Title className="truncate text-[17px] font-semibold">{title}</DialogPrimitive.Title>
+      )}
       <DialogPrimitive.Close className="press justify-self-end text-[15px] text-muted-foreground outline-none">
         {cancelLabel}
       </DialogPrimitive.Close>

@@ -18,6 +18,7 @@ function DataLoader({ userId }: { userId: string | null }) {
 
     useEffect(() => {
         if (!userId) return
+        if (!navigator.onLine) setOnline(false)
 
         const onOnline = () => setOnline(true)
         const onOffline = () => setOnline(false)

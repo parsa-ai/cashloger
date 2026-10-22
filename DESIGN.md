@@ -34,8 +34,8 @@ edge), 16px in from the screen sides and clear of the safe areas, like Telegram 
 ## Sheets
 
 - Nav bar: confirm («ذخیره») on the right, title in the middle, «انصراف» on the left in muted text.
-- Transaction sheet reads top to bottom by importance: kind → amount (hero, with the amount in words under it)
-  → category wheel (3 rows, blob icons) → date / note → numpad.
+- Transaction sheet fits without scrolling and reads by importance: kind toggle in the nav → amount (hero)
+  → one card with the category wheel (3 rows, blob icons) over date / note → flat numpad.
 
 ## Shape and spacing
 
