@@ -70,7 +70,7 @@ export default async function RootLayout({
           {colorThemeScript + installPromptScript}
         </Script>
       </head>
-      <body className="font-sans">
+      <body className="font-sans" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
