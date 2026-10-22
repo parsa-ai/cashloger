@@ -33,6 +33,7 @@ export function buildChartItems(entries: LogEntry[], categories: Category[], isC
     return items.sort((a, b) => b.visitors - a.visitors)
 }
 
+// دونات سهم دسته‌ها با مجموع در وسط؛ جمع‌وجور تا در نگاه اول دیده شود
 export function SpendingChart({ items, isCosts }: { items: ChartItem[]; isCosts: boolean }) {
     const total = items.reduce((sum, item) => sum + item.visitors, 0)
     // در تب پنهان اندازهٔ ظرف صفر است و recharts هشدار می‌دهد؛ فقط وقتی دیده می‌شود رسم کن
@@ -43,14 +44,14 @@ export function SpendingChart({ items, isCosts }: { items: ChartItem[]; isCosts:
             <EmptyState
                 expression={surprised}
                 title={isCosts ? "این ماه هنوز خرجی نکردی" : "این ماه هنوز درآمدی ثبت نشده"}
-                description="با دکمهٔ + اولین تراکنش رو ثبت کن."
+                description="یکی از دسته‌های بالا رو لمس کن تا اولین تراکنش ثبت بشه."
             />
         )
     }
 
     return (
         <div className="animate-fade-in">
-            <div className="relative mx-auto aspect-square w-full max-w-52 py-4">
+            <div className="relative mx-auto aspect-square w-full max-w-44 py-4">
                 {active && (
                 <ChartContainer config={{}} className="aspect-square size-full">
                     <PieChart>
@@ -77,36 +78,43 @@ export function SpendingChart({ items, isCosts }: { items: ChartItem[]; isCosts:
                 )}
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-[12px] text-muted-foreground">مجموع {isCosts ? "هزینه" : "درآمد"}</span>
-                    <span className="text-xl font-bold">
+                    <span className="text-lg font-bold">
                         <AnimatedNumber value={total} />
                     </span>
                 </div>
             </div>
+        </div>
+    )
+}
 
-            <div className="border-t border-separator">
-                {items.map((item) => {
-                    const percent = total ? Math.round((item.visitors / total) * 100) : 0
-                    return (
-                        <Row
-                            key={item.id}
-                            leading={<CategoryAvatar label={item.category} color={item.fill} size={32} />}
-                            title={item.category}
-                            subtitle={
-                                <span className="flex items-center gap-2">
-                                    <span className="h-1 flex-1 overflow-hidden rounded-full bg-fill">
-                                        <span
-                                            className="block h-full rounded-full transition-[width] duration-500 ease-out"
-                                            style={{ width: `${percent}%`, backgroundColor: item.fill }}
-                                        />
-                                    </span>
-                                    <span className="num w-8 text-left">{percent.toLocaleString("fa-IR")}٪</span>
+// ریز سهم هر دسته؛ ممکن است بلند شود، پس پایین صفحه می‌آید
+export function CategoryBreakdown({ items }: { items: ChartItem[] }) {
+    const total = items.reduce((sum, item) => sum + item.visitors, 0)
+
+    return (
+        <div>
+            {items.map((item) => {
+                const percent = total ? Math.round((item.visitors / total) * 100) : 0
+                return (
+                    <Row
+                        key={item.id}
+                        leading={<CategoryAvatar label={item.category} color={item.fill} size={32} />}
+                        title={item.category}
+                        subtitle={
+                            <span className="flex items-center gap-2">
+                                <span className="h-1 flex-1 overflow-hidden rounded-full bg-fill">
+                                    <span
+                                        className="block h-full rounded-full transition-[width] duration-500 ease-out"
+                                        style={{ width: `${percent}%`, backgroundColor: item.fill }}
+                                    />
                                 </span>
-                            }
-                            trailing={<span className="num text-[15px] font-semibold">{formatMoney(item.visitors)}</span>}
-                        />
-                    )
-                })}
-            </div>
+                                <span className="num w-8 text-left">{percent.toLocaleString("fa-IR")}٪</span>
+                            </span>
+                        }
+                        trailing={<span className="num text-[15px] font-semibold">{formatMoney(item.visitors)}</span>}
+                    />
+                )
+            })}
         </div>
     )
 }

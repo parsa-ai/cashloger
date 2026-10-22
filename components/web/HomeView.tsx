@@ -4,7 +4,7 @@ import { useMemo } from "react"
 import { ArrowDown, ArrowUp } from "lucide-react"
 
 import { AnimatedNumber } from "@/components/web/AnimatedNumber"
-import { buildChartItems, SpendingChart } from "@/components/web/Chart"
+import { buildChartItems, CategoryBreakdown, SpendingChart } from "@/components/web/Chart"
 import { CategoryAvatar } from "@/components/web/Avatars"
 import { Group } from "@/components/web/Group"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
@@ -81,7 +81,7 @@ function SummaryCard({ income, costs }: { income: number; costs: number }) {
 }
 
 // ثبت سریع: لمس هر دسته شیت ثبت را با همان دسته باز می‌کند.
-// دسته‌ها در دو ردیف کنار هم می‌آیند و به پهلو اسکرول می‌شوند تا صفحه شلوغ نشود
+// همهٔ دسته‌ها بدون اسکرول دیده می‌شوند (پرکاربردترها اول)
 function CategoryChips({ kind }: { kind: LogKind }) {
     const openAdd = useUiStore((s) => s.openAdd)
     const categories = useCategoriesByUsage(kind)
@@ -92,13 +92,7 @@ function CategoryChips({ kind }: { kind: LogKind }) {
     return (
         <section>
             <h2 className="mb-1.5 px-4 text-[13px] text-muted-foreground">ثبت سریع {kindLabel}</h2>
-            <div
-                data-no-swipe
-                className={cn(
-                    "-mx-4 grid auto-cols-max grid-flow-col gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-                    categories.length > 4 && "grid-rows-2"
-                )}
-            >
+            <div className="flex flex-wrap gap-2">
                 {categories.map((c) => (
                     <button
                         key={c.id}
@@ -108,7 +102,7 @@ function CategoryChips({ kind }: { kind: LogKind }) {
                             openAdd(kind, c.id)
                         }}
                         aria-label={`ثبت ${kindLabel} در ${c.label}`}
-                        className="press flex h-10 items-center gap-2 rounded-full bg-card ps-1.5 pe-4 text-[14px] font-medium"
+                        className="press flex h-10 max-w-full items-center gap-2 rounded-full bg-card ps-1.5 pe-4 text-[14px] font-medium"
                     >
                         <CategoryAvatar label={c.label} color={c.color} size={28} />
                         <span className="max-w-32 truncate">{c.label}</span>
@@ -170,10 +164,17 @@ export function HomeView() {
                     ]}
                 />
                 <CategoryChips kind={kind} />
-                <Group title="سهم دسته‌ها">
+                <div className="overflow-hidden rounded-xl bg-card">
                     <SpendingChart key={kind} items={items} isCosts={kind === "cost"} />
-                </Group>
+                </div>
             </div>
+
+            {/* ریز دسته‌ها ممکن است بلند باشد؛ آخر صفحه تا چیزی را پایین هل ندهد */}
+            {items.length > 0 && (
+                <Group title={`ریز ${kind === "cost" ? "هزینه‌ها" : "درآمدها"}`}>
+                    <CategoryBreakdown key={kind} items={items} />
+                </Group>
+            )}
         </div>
     )
 }
