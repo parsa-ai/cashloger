@@ -7,6 +7,7 @@ import { CategoryManager } from "@/components/web/CategoryManager"
 import { HomeView } from "@/components/web/HomeView"
 import { TransactionList } from "@/components/web/TransactionList"
 import { UserView } from "@/components/web/UserView"
+import { ViewActiveContext } from "@/components/web/ViewActive"
 import { routeIndex, tabIndex } from "@/lib/nav"
 
 const VIEWS: Record<string, React.ComponentType> = {
@@ -62,7 +63,9 @@ export function AppViews({ children }: { children: React.ReactNode }) {
                         }}
                         hidden={path !== pathname}
                     >
-                        <View />
+                        <ViewActiveContext.Provider value={path === pathname}>
+                            <View />
+                        </ViewActiveContext.Provider>
                     </div>
                 )
             })}

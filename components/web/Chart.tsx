@@ -8,6 +8,7 @@ import { AnimatedNumber } from "@/components/web/AnimatedNumber"
 import { CategoryAvatar } from "@/components/web/Avatars"
 import { EmptyState } from "@/components/web/EmptyState"
 import { Row } from "@/components/web/Group"
+import { useViewActive } from "@/components/web/ViewActive"
 import { UNCATEGORIZED_COLOR } from "@/lib/palette"
 import { Category, ChartItem, LogEntry } from "@/lib/types"
 import { formatMoney, UNCATEGORIZED_LABEL } from "@/lib/utils"
@@ -34,6 +35,8 @@ export function buildChartItems(entries: LogEntry[], categories: Category[], isC
 
 export function SpendingChart({ items, isCosts }: { items: ChartItem[]; isCosts: boolean }) {
     const total = items.reduce((sum, item) => sum + item.visitors, 0)
+    // در تب پنهان اندازهٔ ظرف صفر است و recharts هشدار می‌دهد؛ فقط وقتی دیده می‌شود رسم کن
+    const active = useViewActive()
 
     if (items.length === 0) {
         return (
@@ -48,6 +51,7 @@ export function SpendingChart({ items, isCosts }: { items: ChartItem[]; isCosts:
     return (
         <div className="animate-fade-in">
             <div className="relative mx-auto aspect-square w-full max-w-52 py-4">
+                {active && (
                 <ChartContainer config={{}} className="aspect-square size-full">
                     <PieChart>
                         <Pie
@@ -70,6 +74,7 @@ export function SpendingChart({ items, isCosts }: { items: ChartItem[]; isCosts:
                         </Pie>
                     </PieChart>
                 </ChartContainer>
+                )}
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-[12px] text-muted-foreground">مجموع {isCosts ? "هزینه" : "درآمد"}</span>
                     <span className="text-xl font-bold">
