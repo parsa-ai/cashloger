@@ -12,6 +12,10 @@ export const PALETTE_ROWS: string[][] = [
 
 export const PALETTE: string[] = PALETTE_ROWS.flat()
 
+// رنگ‌هایی که موقع ساختن یا ویرایش دسته پیشنهاد می‌شوند: ۱۲ فام پررنگ و از هم جدا.
+// رنگ دسته‌هایی که قبلاً از کل پالت انتخاب شده‌اند همان‌طور می‌ماند.
+export const SWATCHES: string[] = [0, 1, 2, 3, 5, 7, 9, 10, 11, 12, 13, 14].map((i) => PALETTE_ROWS[1][i])
+
 export const UNCATEGORIZED_COLOR = "oklch(0.68 0.01 260)"
 
 interface Oklch {
@@ -60,12 +64,11 @@ export function colorHue(color: string) {
     return parseOklch(color)?.h ?? 255
 }
 
-// رنگی از پالت که کمتر از بقیه بین دسته‌های موجود استفاده شده (اولویت با تن پررنگ)
+// رنگی از رنگ‌های پیشنهادی که کمتر از بقیه بین دسته‌های موجود استفاده شده
 export function suggestColor(usedColors: string[]) {
-    const ordered = [...PALETTE_ROWS[1], ...PALETTE_ROWS[2], ...PALETTE_ROWS[3], ...PALETTE_ROWS[0]]
-    let best = ordered[0]
+    let best = SWATCHES[0]
     let bestCount = Infinity
-    for (const color of ordered) {
+    for (const color of SWATCHES) {
         const count = usedColors.filter((c) => c === color).length
         if (count < bestCount) {
             best = color

@@ -75,7 +75,7 @@ function CategoryForm({ kind, category, onDone }: CategoryFormProps) {
     return (
         <>
             <DialogNav
-                title={category ? "ویرایش دسته‌بندی" : "دسته‌بندی جدید"}
+                title={category ? "ویرایش دسته" : kind === "cost" ? "دستهٔ هزینهٔ جدید" : "دستهٔ درآمد جدید"}
                 action={
                     <Button type="submit" form={FORM_ID} variant="plain" size="nav" disabled={!trimmed}>
                         {category ? "ذخیره" : "افزودن"}
@@ -84,24 +84,22 @@ function CategoryForm({ kind, category, onDone }: CategoryFormProps) {
             />
             <DialogBody>
                 <form id={FORM_ID} onSubmit={handleSubmit} className="space-y-6">
-                    <div className="flex flex-col items-center gap-2 pt-2">
-                        <CategoryAvatar label={trimmed || "؟"} color={color} size={88} animate />
-                        <p className="text-[13px] text-muted-foreground">{kind === "cost" ? "دستهٔ هزینه" : "دستهٔ درآمد"}</p>
-                    </div>
-
                     <Group footer={error ? <span className="text-destructive">{error}</span> : undefined}>
-                        <input
-                            value={label}
-                            onChange={(e) => {
-                                setLabel(e.target.value)
-                                setError(null)
-                            }}
-                            placeholder="نام دسته‌بندی"
-                            maxLength={40}
-                            enterKeyHint="done"
-                            aria-invalid={!!error}
-                            className="h-11 w-full bg-transparent px-4 text-[15px] outline-none placeholder:text-muted-foreground/70"
-                        />
+                        <div className="flex items-center gap-3 ps-3 pe-4">
+                            <CategoryAvatar label={trimmed || "؟"} color={color} size={36} />
+                            <input
+                                value={label}
+                                onChange={(e) => {
+                                    setLabel(e.target.value)
+                                    setError(null)
+                                }}
+                                placeholder="نام دسته‌بندی"
+                                maxLength={40}
+                                enterKeyHint="done"
+                                aria-invalid={!!error}
+                                className="h-[52px] min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-muted-foreground/70"
+                            />
+                        </div>
                     </Group>
 
                     <Group title="رنگ">
