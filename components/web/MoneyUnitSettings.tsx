@@ -1,43 +1,48 @@
 "use client"
 
-import { Check } from "lucide-react"
+import { ChevronsUpDown, Coins } from "lucide-react"
 
-import { Group, Row } from "@/components/web/Group"
-import { formatMoney, MONEY_UNITS } from "@/lib/money"
-import { cn, haptic } from "@/lib/utils"
+import { Group, IconTile, Row } from "@/components/web/Group"
+import { getMoneyUnit, MONEY_UNITS, MoneyUnitId } from "@/lib/money"
+import { haptic } from "@/lib/utils"
 import { useMoneyUnitStore } from "@/store/useMoneyUnitStore"
 
-const SAMPLE = 1_250_000
-
-// انتخاب واحد پول برای نمایش و ورود مبالغ (مبالغ همیشه به تومان ذخیره می‌شوند)
+// انتخاب واحد پول برای نمایش و ورود مبالغ (مبالغ همیشه به تومان ذخیره می‌شوند).
+// یک select بومی و نامرئی روی ردیف است تا روی گوشی انتخابگر خود سیستم باز شود
 export function MoneyUnitSettings() {
     const unit = useMoneyUnitStore((s) => s.unit)
     const setUnit = useMoneyUnitStore((s) => s.setUnit)
 
     return (
-        <Group title="واحد پول" footer="فقط نحوهٔ نمایش و ورود مبلغ عوض می‌شود؛ مبالغ ثبت‌شده تغییری نمی‌کنند.">
-            {MONEY_UNITS.map((u) => {
-                const selected = u.id === unit
-                return (
-                    <Row
-                        key={u.id}
-                        onClick={() => {
-                            if (selected) return
-                            haptic()
-                            setUnit(u.id)
-                        }}
-                        title={u.label}
-                        subtitle={<span className="num">{`${formatMoney(SAMPLE, u)} ${u.label}`}</span>}
-                        trailing={
-                            <Check
-                                aria-hidden
-                                className={cn("size-5 text-primary transition-opacity duration-150", selected ? "opacity-100" : "opacity-0")}
-                                strokeWidth={2.4}
-                            />
-                        }
-                    />
-                )
-            })}
+        <Group footer="فقط نحوهٔ نمایش و ورود مبلغ عوض می‌شود؛ مبالغ ثبت‌شده تغییری نمی‌کنند.">
+            <Row
+                className="press-row relative"
+                leading={<IconTile color="oklch(0.7 0.16 75)"><Coins /></IconTile>}
+                title="واحد پول"
+                trailing={
+                    <>
+                        <span className="flex items-center gap-1 text-[15px] text-muted-foreground">
+                            {getMoneyUnit(unit).label}
+                            <ChevronsUpDown className="size-4 text-muted-foreground/60" />
+                        </span>
+                        <select
+                            value={unit}
+                            onChange={(e) => {
+                                haptic()
+                                setUnit(e.target.value as MoneyUnitId)
+                            }}
+                            aria-label="واحد پول"
+                            className="absolute inset-0 cursor-pointer opacity-0"
+                        >
+                            {MONEY_UNITS.map((u) => (
+                                <option key={u.id} value={u.id}>
+                                    {u.label}
+                                </option>
+                            ))}
+                        </select>
+                    </>
+                }
+            />
         </Group>
     )
 }

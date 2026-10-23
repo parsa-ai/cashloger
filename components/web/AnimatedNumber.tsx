@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { formatMoney } from "@/lib/money"
+import { formatMoney, moneyDecimals } from "@/lib/money"
 import { useMoneyUnit } from "@/store/useMoneyUnitStore"
 
 // عدد با شمارش نرم از مقدار قبلی به مقدار جدید (در اولین نمایش بدون انیمیشن)
@@ -30,5 +30,6 @@ export function AnimatedNumber({ value, duration = 500 }: { value: number; durat
         return () => cancelAnimationFrame(frame)
     }, [value, duration])
 
-    return <span className="num">{formatMoney(display, unit)}</span>
+    // اعداد میانی با همان دقت مقدار نهایی نمایش داده می‌شوند؛ وگرنه «۱۲٫۳۴۶» (ممیز) شبیه «۱۲٬۳۴۶» (هزارگان) دیده می‌شود
+    return <span className="num">{formatMoney(display, unit, moneyDecimals(value, unit))}</span>
 }

@@ -30,9 +30,18 @@ export function fromUnit(value: number, unit: MoneyUnit) {
     return Math.round(value * unit.factor)
 }
 
-// نمایش مبلغ (تومان) در واحد انتخابی؛ اعشار حداکثر ۳ رقم
-export function formatMoney(toman: number, unit: MoneyUnit) {
-    return toUnit(toman, unit).toLocaleString("fa-IR", { maximumFractionDigits: Math.min(3, unitDecimals(unit)) })
+// نمایش مبلغ (تومان) در واحد انتخابی؛ اعشار حداکثر ۳ رقم، یا دقیقاً decimals رقم اگر داده شود
+export function formatMoney(toman: number, unit: MoneyUnit, decimals?: number) {
+    return toUnit(toman, unit).toLocaleString("fa-IR", {
+        minimumFractionDigits: decimals ?? 0,
+        maximumFractionDigits: decimals ?? Math.min(3, unitDecimals(unit)),
+    })
+}
+
+// تعداد رقم اعشاری که نمایش این مبلغ لازم دارد (۱۲٫۵ ← ۱)
+export function moneyDecimals(toman: number, unit: MoneyUnit) {
+    const fixed = toUnit(toman, unit).toFixed(Math.min(3, unitDecimals(unit)))
+    return fixed.includes(".") ? fixed.replace(/0+$/, "").split(".")[1].length : 0
 }
 
 // مقدار خام برای ویرایش (بدون جداکننده و با دقت کامل)، مثل «12.5»
