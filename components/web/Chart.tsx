@@ -1,6 +1,7 @@
 "use client"
 
 import { Cell, Pie, PieChart } from "recharts"
+import { ChevronDown } from "lucide-react"
 import { surprised } from "blobatar/expression"
 
 import { ChartContainer } from "@/components/ui/chart"
@@ -11,7 +12,7 @@ import { Row } from "@/components/web/Group"
 import { useViewActive } from "@/components/web/ViewActive"
 import { UNCATEGORIZED_COLOR } from "@/lib/palette"
 import { Category, ChartItem, LogEntry } from "@/lib/types"
-import { formatMoney, UNCATEGORIZED_LABEL } from "@/lib/utils"
+import { cn, formatMoney, UNCATEGORIZED_LABEL } from "@/lib/utils"
 
 export function buildChartItems(entries: LogEntry[], categories: Category[], isCosts: boolean): ChartItem[] {
     const mode = isCosts ? "decrease" : "increase"
@@ -33,10 +34,9 @@ export function buildChartItems(entries: LogEntry[], categories: Category[], isC
     return items.sort((a, b) => b.visitors - a.visitors)
 }
 
-// دونات سهم دسته‌ها با مجموع در وسط؛ جمع‌وجور تا در نگاه اول دیده شود
-export function SpendingChart({ items, isCosts }: { items: ChartItem[]; isCosts: boolean }) {
+// با onOpen، کل دونات دکمه می‌شود و یک فلش کوچک زیر مجموع نشان می‌دهد که قابل لمس است
+export function SpendingChart({ items, isCosts, onOpen }: { items: ChartItem[]; isCosts: boolean; onOpen?: () => void }) {
     const total = items.reduce((sum, item) => sum + item.visitors, 0)
-    // در تب پنهان اندازهٔ ظرف صفر است و recharts هشدار می‌دهد؛ فقط وقتی دیده می‌شود رسم کن
     const active = useViewActive()
 
     if (items.length === 0) {
@@ -49,9 +49,21 @@ export function SpendingChart({ items, isCosts }: { items: ChartItem[]; isCosts:
         )
     }
 
+    const Wrapper = onOpen ? "button" : "div"
+
     return (
         <div className="animate-fade-in">
-            <div className="relative mx-auto aspect-square w-full max-w-44 py-4">
+            <Wrapper
+                {...(onOpen && {
+                    type: "button" as const,
+                    onClick: onOpen,
+                    "aria-label": `جزئیات ${isCosts ? "هزینه‌ها" : "درآمدها"} به تفکیک دسته`,
+                })}
+                className={cn(
+                    "relative mx-auto block aspect-square w-full max-w-44 py-4",
+                    onOpen && "press-scale rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                )}
+            >
                 {active && (
                 <ChartContainer config={{}} className="aspect-square size-full">
                     <PieChart>
@@ -81,13 +93,17 @@ export function SpendingChart({ items, isCosts }: { items: ChartItem[]; isCosts:
                     <span className="text-lg font-bold">
                         <AnimatedNumber value={total} />
                     </span>
+                    {onOpen && (
+                        <span aria-hidden className="mt-1 grid size-6 place-items-center rounded-full bg-tint text-primary">
+                            <ChevronDown className="size-4" strokeWidth={2.4} />
+                        </span>
+                    )}
                 </div>
-            </div>
+            </Wrapper>
         </div>
     )
 }
 
-// ریز سهم هر دسته؛ ممکن است بلند شود، پس پایین صفحه می‌آید
 export function CategoryBreakdown({ items }: { items: ChartItem[] }) {
     const total = items.reduce((sum, item) => sum + item.visitors, 0)
 

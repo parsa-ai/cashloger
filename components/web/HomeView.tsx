@@ -1,8 +1,9 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { ArrowDown, ArrowUp, Plus } from "lucide-react"
 
+import { Dialog, DialogBody, DialogContent, DialogNav } from "@/components/ui/dialog"
 import { AnimatedNumber } from "@/components/web/AnimatedNumber"
 import { buildChartItems, CategoryBreakdown, SpendingChart } from "@/components/web/Chart"
 import { CategoryAvatar } from "@/components/web/Avatars"
@@ -182,6 +183,8 @@ export function HomeView() {
     const kind = useUiStore((s) => s.addKind)
     const setKind = useUiStore((s) => s.setAddKind)
 
+    const [breakdownOpen, setBreakdownOpen] = useState(false)
+
     const isLoading = useLogStore((s) => s.isLoading)
     const categories = useLogStore((s) => s.categories)
     const date = useDateStore((s) => s.date) || new Date()
@@ -217,16 +220,30 @@ export function HomeView() {
                     ]}
                 />
                 <CategoryChips kind={kind} />
-                {kind === "cost" && <Budgets entries={entries} categories={categories} />}
-                <div className="overflow-hidden">
-                    <SpendingChart key={kind} items={items} isCosts={kind === "cost"} />
-                </div>
             </div>
-            {items.length > 0 && (
-                <Group>
-                    <CategoryBreakdown key={kind} items={items} />
-                </Group>
-            )}
+            <div className="overflow-hidden">
+                <SpendingChart
+                    key={kind}
+                    items={items}
+                    isCosts={kind === "cost"}
+                    onOpen={() => {
+                        haptic()
+                        setBreakdownOpen(true)
+                    }}
+                />
+            </div>
+            {kind === "cost" && <Budgets entries={entries} categories={categories} />}
+
+            <Dialog open={breakdownOpen && items.length > 0} onOpenChange={setBreakdownOpen}>
+                <DialogContent>
+                    <DialogNav title={kind === "cost" ? "هزینه‌ها به تفکیک دسته" : "درآمدها به تفکیک دسته"} />
+                    <DialogBody>
+                        <Group>
+                            <CategoryBreakdown items={items} />
+                        </Group>
+                    </DialogBody>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
