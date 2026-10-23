@@ -9,16 +9,19 @@ import { EmptyState } from "@/components/web/EmptyState"
 import { Group } from "@/components/web/Group"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { TransactionRow } from "@/components/web/TransactionRow"
+import { formatMoney } from "@/lib/money"
 import { LogEntry } from "@/lib/types"
-import { formatDayTitle, formatMoney } from "@/lib/utils"
+import { formatDayTitle } from "@/lib/utils"
 import { useMonthEntries } from "@/store/selectors"
 import { useLogStore } from "@/store/useChartStore"
 import { useUiStore } from "@/store/useUiStore"
 import useDateStore from "@/store/useYearStore"
+import { useMoneyUnit } from "@/store/useMoneyUnitStore"
 
 type Filter = "all" | "cost" | "income"
 
 export function TransactionList() {
+    const unit = useMoneyUnit()
     const [filter, setFilter] = useState<Filter>("all")
     const [query, setQuery] = useState("")
     const setAddKind = useUiStore((s) => s.setAddKind)
@@ -109,7 +112,7 @@ export function TransactionList() {
                             action={
                                 <span className="num text-[13px] text-muted-foreground">
                                     {dayTotal > 0 ? "+" : dayTotal < 0 ? "−" : ""}
-                                    {formatMoney(Math.abs(dayTotal))}
+                                    {formatMoney(Math.abs(dayTotal), unit)}
                                 </span>
                             }
                         >

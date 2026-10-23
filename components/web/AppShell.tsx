@@ -2,10 +2,17 @@
 
 import { useEffect } from "react"
 
+import { useMoneyUnitStore } from "@/store/useMoneyUnitStore"
+
 // صفحاتی که برای کار آفلاین از قبل کش می‌شوند
 const OFFLINE_PAGES = ["/", "/logs", "/user", "/categories"]
 
 function AppShell({ children, signedIn }: { children: React.ReactNode; signedIn: boolean }) {
+  // واحد پول ذخیره‌شده بعد از mount خوانده می‌شود
+  useEffect(() => {
+    useMoneyUnitStore.persist.rehydrate()
+  }, [])
+
   useEffect(() => {
     // در حالت توسعه سرویس‌ورکر باعث کش شدن فایل‌های قدیمی می‌شود
     if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return

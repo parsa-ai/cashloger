@@ -10,11 +10,13 @@ import { ColorPicker } from "@/components/web/ColorPicker"
 import { Group, Row } from "@/components/web/Group"
 import { MoneyInput } from "@/components/web/MoneyInput"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
+import { formatAmountWords, formatMoney } from "@/lib/money"
 import { suggestColor } from "@/lib/palette"
 import { Category, LogKind } from "@/lib/types"
-import { formatAmountWords, formatMoney, haptic, MONEY_UNIT } from "@/lib/utils"
+import { haptic } from "@/lib/utils"
 import { useLogStore } from "@/store/useChartStore"
 import { toast } from "@/store/useToastStore"
+import { useMoneyUnit } from "@/store/useMoneyUnitStore"
 
 const FORM_ID = "category-form"
 
@@ -147,6 +149,7 @@ function CategoryForm({ kind, category, onDone }: CategoryFormProps) {
 }
 
 export function CategoryManager() {
+    const unit = useMoneyUnit()
     const [kind, setKind] = useState<LogKind>("cost")
     const [open, setOpen] = useState(false)
     const [editing, setEditing] = useState<Category | undefined>()
@@ -193,7 +196,7 @@ export function CategoryManager() {
                                 onClick={() => openForm(category)}
                                 leading={<CategoryAvatar label={category.label} color={category.color} size={36} />}
                                 title={category.label}
-                                subtitle={category.budget ? `بودجه: ${formatMoney(category.budget)} ${MONEY_UNIT}` : undefined}
+                                subtitle={category.budget ? `بودجه: ${formatMoney(category.budget, unit)} ${unit.label}` : undefined}
                                 trailing={
                                     count > 0 && (
                                         <span className="num text-[13px] text-muted-foreground">{count.toLocaleString("fa-IR")}</span>

@@ -10,6 +10,7 @@ import { Dialog, DialogBody, DialogContent, DialogNav } from '@/components/ui/di
 import { PasswordField } from '@/components/ui/password-field'
 import { UserBlob } from '@/components/web/Avatars'
 import { ExportSheet } from '@/components/web/ExportSheet'
+import { MoneyUnitSettings } from '@/components/web/MoneyUnitSettings'
 import { ReminderSettings } from '@/components/web/Reminders'
 import { Group, IconTile, Row } from '@/components/web/Group'
 import { useBlobName, useProfile } from '@/components/web/ProfileProvider'
@@ -295,6 +296,8 @@ export function UserView() {
       <ReminderSettings />
 
       <ThemeSettings />
+
+      <MoneyUnitSettings />
 
       <Group
         title="داده‌ها"

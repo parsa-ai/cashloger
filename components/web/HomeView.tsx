@@ -10,12 +10,14 @@ import { CategoryAvatar } from "@/components/web/Avatars"
 import { Goals } from "@/components/web/Goals"
 import { Group, Row } from "@/components/web/Group"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
+import { formatMoney } from "@/lib/money"
 import { Category, LogEntry, LogKind } from "@/lib/types"
-import { cn, formatMoney, haptic, MONEY_UNIT } from "@/lib/utils"
+import { cn, haptic } from "@/lib/utils"
 import { useCategoriesByUsage, useMonthEntries } from "@/store/selectors"
 import { useLogStore } from "@/store/useChartStore"
 import { useUiStore } from "@/store/useUiStore"
 import useDateStore from "@/store/useYearStore"
+import { useMoneyUnit } from "@/store/useMoneyUnitStore"
 
 function Stat({ label, value, kind }: { label: string; value: number; kind: LogKind }) {
     const openAdd = useUiStore((s) => s.openAdd)
@@ -53,6 +55,7 @@ function Stat({ label, value, kind }: { label: string; value: number; kind: LogK
 
 
 function SummaryCard({ income, costs }: { income: number; costs: number }) {
+    const unit = useMoneyUnit()
     const balance = income - costs
 
     return (
@@ -60,7 +63,7 @@ function SummaryCard({ income, costs }: { income: number; costs: number }) {
             <div className="px-4 pt-4 pb-3">
                 <p className={cn("mt-0.5 text-[34px] leading-tight font-bold", balance < 0 ? "text-destructive" : "text-success")}>
                     <AnimatedNumber value={balance} />
-                    <span className="ms-1.5 text-[15px] font-medium text-muted-foreground">{MONEY_UNIT}</span>
+                    <span className="ms-1.5 text-[15px] font-medium text-muted-foreground">{unit.label}</span>
                 </p>
             </div>
             <div className="grid grid-cols-2 border-t border-separator [&>:first-child]:border-e [&>:first-child]:border-separator">
@@ -105,6 +108,7 @@ function CategoryChips({ kind }: { kind: LogKind }) {
 
 // بودجهٔ ماهانهٔ هر دسته: چقدر از آن در این ماه خرج شده
 function Budgets({ entries, categories }: { entries: LogEntry[]; categories: Category[] }) {
+    const unit = useMoneyUnit()
     const openAdd = useUiStore((s) => s.openAdd)
 
     const rows = useMemo(() => {
@@ -154,7 +158,7 @@ function Budgets({ entries, categories }: { entries: LogEntry[]; categories: Cat
                         trailing={
                             <span className="text-left leading-tight">
                                 <span className={cn("num block text-[15px] font-semibold", over && "text-destructive")}>
-                                    {formatMoney(over ? spent - budget : budget - spent)}
+                                    {formatMoney(over ? spent - budget : budget - spent, unit)}
                                 </span>
                                 <span className="block text-[12px] text-muted-foreground">{over ? "بیشتر از بودجه" : "مانده"}</span>
                             </span>

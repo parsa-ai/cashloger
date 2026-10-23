@@ -66,31 +66,6 @@ export function defaultEntryDate(viewDate: Date) {
   return addDays(shiftPersianMonth(start, 1), -1);
 }
 
-export function formatMoney(value: number) {
-  return Math.round(value).toLocaleString("fa-IR")
-}
-
-// واحد اصلی همهٔ مبالغ (ورودی، نمایش و ذخیره)
-export const MONEY_UNIT = "هزار تومان"
-
-// مبلغ (به هزار تومان) به زبان خودمانی: ۱۲۵۰ ← «۱ میلیون و ۲۵۰ هزار تومان»
-export function formatAmountWords(thousands: number) {
-  const value = thousands * 1000
-  if (value < 1000) return ""
-  const units: [number, string][] = [[1e12, "هزار میلیارد"], [1e9, "میلیارد"], [1e6, "میلیون"], [1e3, "هزار"]]
-  const parts: string[] = []
-  let rest = Math.floor(value)
-  for (const [size, name] of units) {
-    const count = Math.floor(rest / size)
-    if (count > 0) {
-      parts.push(`${count.toLocaleString("fa-IR")} ${name}`)
-      rest -= count * size
-    }
-  }
-  if (rest > 0) parts.push(rest.toLocaleString("fa-IR"))
-  return `${parts.join(" و ")} تومان`
-}
-
 export function formatMonthTitle(date: Date) {
   return date.toLocaleDateString("fa-IR", { month: "long", year: "numeric" })
 }

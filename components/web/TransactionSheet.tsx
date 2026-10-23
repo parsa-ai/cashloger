@@ -12,9 +12,11 @@ import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { WheelPicker } from "@/components/web/WheelPicker"
 import { navigate } from "@/lib/nav"
 import { LogEntry, LogKind } from "@/lib/types"
-import { addDays, cn, defaultEntryDate, haptic, isSameDay, MONEY_UNIT } from "@/lib/utils"
+import { cleanInput, formatInput, fromUnit, toUnitInput, unitDecimals } from "@/lib/money"
+import { addDays, cn, defaultEntryDate, haptic, isSameDay } from "@/lib/utils"
 import { useCategoriesByUsage } from "@/store/selectors"
 import { useLogStore } from "@/store/useChartStore"
+import { useMoneyUnit } from "@/store/useMoneyUnitStore"
 import { toast } from "@/store/useToastStore"
 import { useUiStore } from "@/store/useUiStore"
 import useDateStore from "@/store/useYearStore"
@@ -49,18 +51,17 @@ function toLatinDigits(text: string) {
     return text.replace(/[۰-۹٠-٩]/g, (d) => String(d.charCodeAt(0) - (d >= "۰" ? 0x06f0 : 0x0660)))
 }
 
-// افزودن رقم به مبلغ: صفر اول نمی‌گیرد و از سقف رقم‌ها رد نمی‌شود
-function pushDigits(digits: string, add: string) {
-    return (digits + add).replace(/^0+/, "").slice(0, MAX_DIGITS)
-}
+type NumpadKey = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "000" | "." | "0" | "back"
 
-const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "000", "0", "back"] as const
+const DIGIT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const
 
-// صفحه‌کلید عددی ساده (بدون کاشی، مثل شماره‌گیر گوشی)؛ ۱ بالا چپ
-function Numpad({ onKey }: { onKey: (key: (typeof KEYS)[number]) => void }) {
+// صفحه‌کلید عددی ساده (بدون کاشی، مثل شماره‌گیر گوشی)؛ ۱ بالا چپ.
+// در واحدهای اعشاری (هزار/میلیون تومان) دکمهٔ «۰۰۰» جایش را به ممیز می‌دهد
+function Numpad({ decimal, onKey }: { decimal: boolean; onKey: (key: NumpadKey) => void }) {
+    const keys: NumpadKey[] = [...DIGIT_KEYS, decimal ? "." : "000", "0", "back"]
     return (
         <div dir="ltr" className="grid grid-cols-3">
-            {KEYS.map((key) => (
+            {keys.map((key) => (
                 <button
                     key={key}
                     type="button"
@@ -73,6 +74,8 @@ function Numpad({ onKey }: { onKey: (key: (typeof KEYS)[number]) => void }) {
                 >
                     {key === "back" ? (
                         <Delete className="size-6 text-muted-foreground" />
+                    ) : key === "." ? (
+                        "٫"
                     ) : (
                         Number(key).toLocaleString("fa-IR", { minimumIntegerDigits: key.length, useGrouping: false })
                     )}
@@ -94,13 +97,16 @@ function TransactionForm() {
     const removeLog = useLogStore((s) => s.removeLog)
 
     const [kind, setKind] = useState<LogKind>(entry ? (entry.mode === "increase" ? "income" : "cost") : addKind)
-    const [digits, setDigits] = useState(entry ? String(entry.visitors) : "")
+    const unit = useMoneyUnit()
+    const decimal = unitDecimals(unit) > 0
+    // مبلغ به واحد انتخابی، به شکل رشتهٔ خام مثل «12.5»
+    const [digits, setDigits] = useState(entry ? toUnitInput(entry.visitors, unit) : "")
     const [selected, setSelected] = useState<string | null>(entry ? entry.key : addCategory)
     const [date, setDate] = useState(() => entry?.date ?? defaultEntryDate(viewDate))
     const [description, setDescription] = useState(entry?.description ?? "")
     const [calendarOpen, setCalendarOpen] = useState(false)
 
-    const amount = digits ? Number(digits) : 0
+    const amount = digits ? fromUnit(Number(digits), unit) : 0
     const isCost = kind === "cost"
     const noun = isCost ? "هزینه" : "درآمد"
     const entryKind = entry ? (entry.mode === "increase" ? "income" : "cost") : null
@@ -159,22 +165,27 @@ function TransactionForm() {
         close()
     }
 
-    const pressKey = (key: (typeof KEYS)[number]) => {
+    // افزودن رقم به مبلغ: صفر اول نمی‌گیرد و از سقف رقم‌ها و اعشار واحد رد نمی‌شود
+    const push = (add: string) => setDigits((d) => cleanInput(d + add, unit, MAX_DIGITS))
+
+    const pressKey = (key: NumpadKey) => {
         if (key === "back") setDigits((d) => d.slice(0, -1))
-        else setDigits((d) => pushDigits(d, key))
+        else push(key)
     }
 
     // روی دسکتاپ با کیبورد هم می‌شود مبلغ را زد
     const submitRef = useRef(submit)
+    const pushRef = useRef(push)
     useLayoutEffect(() => {
         submitRef.current = submit
+        pushRef.current = push
     })
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
             const target = e.target as HTMLElement
             if (target.closest("input, textarea") || e.metaKey || e.ctrlKey || e.altKey) return
             const key = toLatinDigits(e.key)
-            if (/^\d$/.test(key)) setDigits((d) => pushDigits(d, key))
+            if (/^\d$/.test(key) || (decimal && /^[.٫]$/.test(key))) pushRef.current(key)
             else if (e.key === "Backspace") setDigits((d) => d.slice(0, -1))
             else if (e.key === "Enter" && !target.closest("button")) submitRef.current()
             else return
@@ -182,7 +193,7 @@ function TransactionForm() {
         }
         window.addEventListener("keydown", onKeyDown)
         return () => window.removeEventListener("keydown", onKeyDown)
-    }, [])
+    }, [decimal])
 
     return (
         <>
@@ -220,9 +231,9 @@ function TransactionForm() {
                             amount === 0 ? "text-muted-foreground/35" : !isCost && "text-success"
                         )}
                     >
-                        {amount.toLocaleString("fa-IR")}
+                        {formatInput(digits) || "۰"}
                     </span>
-                    <span className="text-[15px] font-medium text-muted-foreground">{MONEY_UNIT}</span>
+                    <span className="text-[15px] font-medium text-muted-foreground">{unit.label}</span>
                 </p>
 
                 {/* ۲) جزئیات در یک کارت: دسته (چرخ)، بعد تاریخ و توضیح */}
@@ -321,7 +332,7 @@ function TransactionForm() {
                 </div>
 
                 {/* ۳) صفحه‌کلید عددی */}
-                <Numpad onKey={pressKey} />
+                <Numpad decimal={decimal} onKey={pressKey} />
             </div>
         </>
     )

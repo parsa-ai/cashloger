@@ -10,6 +10,7 @@ import { exportToExcel } from "@/lib/exportExcel"
 import { cn, formatMonthTitle, getPersianYearMonth, haptic } from "@/lib/utils"
 import { useMonthEntries } from "@/store/selectors"
 import { useLogStore } from "@/store/useChartStore"
+import { useMoneyUnit } from "@/store/useMoneyUnitStore"
 import { toast } from "@/store/useToastStore"
 import useDateStore from "@/store/useYearStore"
 
@@ -26,6 +27,7 @@ function Check({ on }: { on: boolean }) {
 export function ExportSheet({ open, onOpenChange: setOpen }: { open: boolean; onOpenChange: (open: boolean) => void }) {
     const [scope, setScope] = useState<Scope>("month")
     const [isExporting, setIsExporting] = useState(false)
+    const unit = useMoneyUnit()
 
     const allEntries = useLogStore((s) => s.entries)
     const categories = useLogStore((s) => s.categories)
@@ -39,7 +41,7 @@ export function ExportSheet({ open, onOpenChange: setOpen }: { open: boolean; on
         try {
             const { year, month } = getPersianYearMonth(date)
             const fileName = scope === "month" ? `cashlog-${year}-${month}.xlsx` : "cashlog-all.xlsx"
-            await exportToExcel(entries, categories, fileName)
+            await exportToExcel(entries, categories, fileName, unit)
             haptic([10, 40, 10])
             toast("فایل اکسل آماده شد", "success")
             setOpen(false)

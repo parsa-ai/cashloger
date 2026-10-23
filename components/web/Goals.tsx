@@ -10,11 +10,13 @@ import { ColorPicker } from "@/components/web/ColorPicker"
 import { Group, Row } from "@/components/web/Group"
 import { MoneyInput } from "@/components/web/MoneyInput"
 import { PersianCalendar } from "@/components/web/PersianCalendar"
+import { formatAmountWords, formatMoney } from "@/lib/money"
 import { suggestColor } from "@/lib/palette"
 import { Goal } from "@/lib/types"
-import { cn, formatAmountWords, formatMoney, haptic, MONEY_UNIT } from "@/lib/utils"
+import { cn, haptic } from "@/lib/utils"
 import { useLogStore } from "@/store/useChartStore"
 import { toast } from "@/store/useToastStore"
+import { useMoneyUnit } from "@/store/useMoneyUnitStore"
 
 const FORM_ID = "goal-form"
 const DAY = 24 * 60 * 60 * 1000
@@ -64,6 +66,7 @@ function ProgressBar({ ratio, color, className }: { ratio: number; color: string
 }
 
 function GoalDetail({ goal, onEdit }: { goal: Goal; onEdit: () => void }) {
+    const unit = useMoneyUnit()
     const updateGoal = useLogStore((s) => s.updateGoal)
     const [amount, setAmount] = useState<number | null>(null)
     const { remaining, ratio, done, perMonth, overdue } = goalProgress(goal)
@@ -101,11 +104,11 @@ function GoalDetail({ goal, onEdit }: { goal: Goal; onEdit: () => void }) {
                         <CategoryAvatar label={goal.label} color={goal.color} size={44} />
                         <div className="min-w-0 flex-1">
                             <p className="truncate text-[28px] leading-tight font-bold">
-                                <span className="num">{formatMoney(goal.saved)}</span>
-                                <span className="ms-1.5 text-[15px] font-medium text-muted-foreground">{MONEY_UNIT}</span>
+                                <span className="num">{formatMoney(goal.saved, unit)}</span>
+                                <span className="ms-1.5 text-[15px] font-medium text-muted-foreground">{unit.label}</span>
                             </p>
                             <p className="text-[13px] text-muted-foreground">
-                                از <span className="num">{formatMoney(goal.target)}</span>
+                                از <span className="num">{formatMoney(goal.target, unit)}</span>
                             </p>
                         </div>
                         <span className={cn("num text-[15px] font-semibold", done && "text-success")}>
@@ -122,10 +125,10 @@ function GoalDetail({ goal, onEdit }: { goal: Goal; onEdit: () => void }) {
                             <span className="text-success">به هدف رسیدی</span>
                         ) : (
                             <>
-                                <span className="num">{formatMoney(remaining)}</span> {MONEY_UNIT} مانده
+                                <span className="num">{formatMoney(remaining, unit)}</span> {unit.label} مانده
                                 {perMonth !== null && (
                                     <>
-                                        {" · "}ماهی <span className="num">{formatMoney(perMonth)}</span> تا{" "}
+                                        {" · "}ماهی <span className="num">{formatMoney(perMonth, unit)}</span> تا{" "}
                                         {formatDeadline(goal.deadline!)}
                                     </>
                                 )}
@@ -288,6 +291,7 @@ function GoalForm({ goal, onDone }: { goal?: Goal; onDone: () => void }) {
 
 // اهداف پس‌انداز در خانه: پیشرفت هر هدف، لمس برای واریز/برداشت یا ویرایش
 export function Goals() {
+    const unit = useMoneyUnit()
     const goals = useLogStore((s) => s.goals)
     const [open, setOpen] = useState(false)
     // نسخهٔ آخر هدف باز شده تا اگر حذف شد، شیت هنگام بسته شدن همان را نشان دهد
@@ -329,9 +333,9 @@ export function Goals() {
                             }
                             trailing={
                                 <span className="text-left leading-tight">
-                                    <span className="num block text-[15px] font-semibold">{formatMoney(goal.saved)}</span>
+                                    <span className="num block text-[15px] font-semibold">{formatMoney(goal.saved, unit)}</span>
                                     <span className="block text-[12px] text-muted-foreground">
-                                        از <span className="num">{formatMoney(goal.target)}</span>
+                                        از <span className="num">{formatMoney(goal.target, unit)}</span>
                                     </span>
                                 </span>
                             }

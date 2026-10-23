@@ -2,11 +2,14 @@
 
 import { CategoryAvatar } from "@/components/web/Avatars"
 import { Row } from "@/components/web/Group"
+import { formatMoney } from "@/lib/money"
 import { Category, LogEntry } from "@/lib/types"
-import { cn, formatMoney, haptic, UNCATEGORIZED_LABEL } from "@/lib/utils"
+import { cn, haptic, UNCATEGORIZED_LABEL } from "@/lib/utils"
 import { useUiStore } from "@/store/useUiStore"
+import { useMoneyUnit } from "@/store/useMoneyUnitStore"
 
 export function TransactionRow({ entry, category, showDate }: { entry: LogEntry; category?: Category; showDate?: boolean }) {
+    const unit = useMoneyUnit()
     const openEdit = useUiStore((s) => s.openEdit)
     const isIncome = entry.mode === "increase"
     const label = category?.label ?? UNCATEGORIZED_LABEL
@@ -26,7 +29,7 @@ export function TransactionRow({ entry, category, showDate }: { entry: LogEntry;
             trailing={
                 <span className={cn("num text-[15px] font-semibold", isIncome && "text-success")}>
                     {isIncome ? "+" : "−"}
-                    {formatMoney(entry.visitors)}
+                    {formatMoney(entry.visitors, unit)}
                 </span>
             }
         />

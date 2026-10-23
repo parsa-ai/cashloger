@@ -1,10 +1,12 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { formatMoney } from "@/lib/utils"
+import { formatMoney } from "@/lib/money"
+import { useMoneyUnit } from "@/store/useMoneyUnitStore"
 
 // عدد با شمارش نرم از مقدار قبلی به مقدار جدید (در اولین نمایش بدون انیمیشن)
 export function AnimatedNumber({ value, duration = 500 }: { value: number; duration?: number }) {
+    const unit = useMoneyUnit()
     const [display, setDisplay] = useState(value)
     const fromRef = useRef(value)
 
@@ -28,5 +30,5 @@ export function AnimatedNumber({ value, duration = 500 }: { value: number; durat
         return () => cancelAnimationFrame(frame)
     }, [value, duration])
 
-    return <span className="num">{formatMoney(display)}</span>
+    return <span className="num">{formatMoney(display, unit)}</span>
 }

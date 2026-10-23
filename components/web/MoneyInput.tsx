@@ -1,19 +1,13 @@
 "use client"
 
-import { cn, formatMoney, MONEY_UNIT } from "@/lib/utils"
+import { useState } from "react"
 
-// ارقام فارسی/عربی را هم می‌پذیرد و فقط عدد نگه می‌دارد
-function parseAmount(value: string) {
-    const digits = value
-        .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
-        .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-        .replace(/\D/g, "")
-        .replace(/^0+/, "")
-        .slice(0, 15)
-    return digits ? Number(digits) : null
-}
+import { cleanInput, formatInput, fromUnit, toUnitInput } from "@/lib/money"
+import { cn } from "@/lib/utils"
+import { useMoneyUnit } from "@/store/useMoneyUnitStore"
 
-// ردیف ورود مبلغ داخل Group: عدد با جداکنندهٔ هزارگان و «هزار تومان» در انتها
+// ردیف ورود مبلغ داخل Group: عدد با جداکنندهٔ هزارگان و واحد پول انتخابی در انتها.
+// value و onChange همیشه به تومان‌اند؛ ورودی به واحد انتخابی است
 export function MoneyInput({
     value,
     onChange,
@@ -29,19 +23,36 @@ export function MoneyInput({
     autoFocus?: boolean
     className?: string
 }) {
+    const unit = useMoneyUnit()
+    const [text, setText] = useState(() => (value ? toUnitInput(value, unit) : ""))
+    const [synced, setSynced] = useState({ value, unit: unit.id })
+
+    // اگر مقدار از بیرون یا واحد عوض شد، متن را از نو بساز (تایپ خود کاربر مثل «۱۲٫» دست نمی‌خورد)
+    if (synced.value !== value || synced.unit !== unit.id) {
+        setSynced({ value, unit: unit.id })
+        setText(value ? toUnitInput(value, unit) : "")
+    }
+
     return (
         <div className={cn("flex items-center gap-3 px-4", className)}>
             <input
-                value={value ? formatMoney(value) : ""}
-                onChange={(e) => onChange(parseAmount(e.target.value))}
+                value={formatInput(text)}
+                onChange={(e) => {
+                    const next = cleanInput(e.target.value, unit)
+                    const amount = next ? fromUnit(Number(next), unit) : 0
+                    const nextValue = amount > 0 ? amount : null
+                    setText(next)
+                    setSynced({ value: nextValue, unit: unit.id })
+                    onChange(nextValue)
+                }}
                 placeholder={placeholder}
-                inputMode="numeric"
+                inputMode={unit.factor > 1 ? "decimal" : "numeric"}
                 enterKeyHint="done"
                 aria-label={label}
                 autoFocus={autoFocus}
                 className="num h-[52px] min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-muted-foreground/70"
             />
-            <span className="text-[15px] shrink-0 text-muted-foreground">{MONEY_UNIT}</span>
+            <span className="shrink-0 text-[15px] text-muted-foreground">{unit.label}</span>
         </div>
     )
 }

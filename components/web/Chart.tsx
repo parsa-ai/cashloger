@@ -10,9 +10,11 @@ import { CategoryAvatar } from "@/components/web/Avatars"
 import { EmptyState } from "@/components/web/EmptyState"
 import { Row } from "@/components/web/Group"
 import { useViewActive } from "@/components/web/ViewActive"
+import { formatMoney } from "@/lib/money"
 import { UNCATEGORIZED_COLOR } from "@/lib/palette"
 import { Category, ChartItem, LogEntry } from "@/lib/types"
-import { cn, formatMoney, UNCATEGORIZED_LABEL } from "@/lib/utils"
+import { cn, UNCATEGORIZED_LABEL } from "@/lib/utils"
+import { useMoneyUnit } from "@/store/useMoneyUnitStore"
 
 export function buildChartItems(entries: LogEntry[], categories: Category[], isCosts: boolean): ChartItem[] {
     const mode = isCosts ? "decrease" : "increase"
@@ -116,6 +118,7 @@ export function SpendingChart({ items, isCosts, onOpen }: { items: ChartItem[]; 
 }
 
 export function CategoryBreakdown({ items }: { items: ChartItem[] }) {
+    const unit = useMoneyUnit()
     const total = items.reduce((sum, item) => sum + item.visitors, 0)
 
     return (
@@ -138,7 +141,7 @@ export function CategoryBreakdown({ items }: { items: ChartItem[] }) {
                                 <span className="num w-8 text-left">{percent.toLocaleString("fa-IR")}٪</span>
                             </span>
                         }
-                        trailing={<span className="num text-[15px] font-semibold">{formatMoney(item.visitors)}</span>}
+                        trailing={<span className="num text-[15px] font-semibold">{formatMoney(item.visitors, unit)}</span>}
                     />
                 )
             })}
