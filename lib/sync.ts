@@ -3,7 +3,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { normalizeColor } from "@/lib/palette"
-import { Category, LogEntry, LogKind } from "@/lib/types"
+import { Category, Goal, LogEntry, LogKind } from "@/lib/types"
 
 export interface TransactionRow {
     id: string
@@ -21,15 +21,19 @@ export type Op = { opId: string } & (
     | { type: "tx.delete"; id: string }
     | { type: "cat.upsert"; row: CategoryRow }
     | { type: "cat.delete"; id: string }
+    | { type: "goal.upsert"; row: Goal }
+    | { type: "goal.delete"; id: string }
 )
 
 export interface LocalData {
     entries: LogEntry[]
     categories: Category[]
+    goals: Goal[]
 }
 
 export const TRANSACTION_COLUMNS = "id, category_id, kind, amount, description, occurred_at"
 export const CATEGORY_COLUMNS = "id, kind, label, color, budget"
+export const GOAL_COLUMNS = "id, label, target, saved, color, deadline"
 
 export function rowToEntry(row: TransactionRow): LogEntry {
     return {
@@ -54,7 +58,7 @@ export function entryToRow(entry: LogEntry): TransactionRow {
 }
 
 function opTarget(op: Op) {
-    const table = op.type.startsWith("tx.") ? "tx" : "cat"
+    const table = op.type.split(".")[0]
     const id = "row" in op ? op.row.id : op.id
     return `${table}:${id}`
 }
@@ -72,13 +76,20 @@ export function enqueue(queue: Op[], op: Op): Op[] {
 
 // برای جلوگیری از رندر و انیمیشن دوباره وقتی داده‌های سرور با داده‌های فعلی فرقی ندارد
 export function sameData(a: LocalData, b: LocalData) {
-    if (a.entries.length !== b.entries.length || a.categories.length !== b.categories.length) return false
+    if (
+        a.entries.length !== b.entries.length ||
+        a.categories.length !== b.categories.length ||
+        a.goals.length !== b.goals.length
+    )
+        return false
     const entryKey = (e: LogEntry) =>
         `${e.id}|${e.key}|${e.date.getTime()}|${e.visitors}|${e.description ?? ""}|${e.mode}`
     const categoryKey = (c: Category) => `${c.id}|${c.kind}|${c.label}|${c.color}|${c.budget ?? ""}`
+    const goalKey = (g: Goal) => `${g.id}|${g.label}|${g.target}|${g.saved}|${g.color}|${g.deadline ?? ""}`
     return (
         a.entries.every((e, i) => entryKey(e) === entryKey(b.entries[i])) &&
-        a.categories.every((c, i) => categoryKey(c) === categoryKey(b.categories[i]))
+        a.categories.every((c, i) => categoryKey(c) === categoryKey(b.categories[i])) &&
+        a.goals.every((g, i) => goalKey(g) === goalKey(b.goals[i]))
     )
 }
 
@@ -108,9 +119,19 @@ export function applyOp(data: LocalData, op: Op): LocalData {
         }
         case "cat.delete":
             return {
+                ...data,
                 categories: data.categories.filter((c) => c.id !== op.id),
                 entries: data.entries.map((e) => (e.key === op.id ? { ...e, key: null } : e)),
             }
+        case "goal.upsert": {
+            const exists = data.goals.some((g) => g.id === op.row.id)
+            return {
+                ...data,
+                goals: exists ? data.goals.map((g) => (g.id === op.row.id ? op.row : g)) : [...data.goals, op.row],
+            }
+        }
+        case "goal.delete":
+            return { ...data, goals: data.goals.filter((g) => g.id !== op.id) }
     }
 }
 
@@ -163,6 +184,14 @@ export async function runOp(supabase: SupabaseClient, op: Op): Promise<OpResult>
                 const { error, status } = await supabase.from("categories").delete().eq("id", op.id)
                 return toResult(error, status)
             }
+            case "goal.upsert": {
+                const { error, status } = await supabase.from("goals").upsert(op.row, { onConflict: "id" })
+                return toResult(error, status)
+            }
+            case "goal.delete": {
+                const { error, status } = await supabase.from("goals").delete().eq("id", op.id)
+                return toResult(error, status)
+            }
         }
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
@@ -174,11 +203,12 @@ export async function fetchRemote(
     supabase: SupabaseClient
 ): Promise<{ ok: true; data: LocalData } | { ok: false; network: boolean; message: string }> {
     try {
-        const [categoriesRes, transactionsRes] = await Promise.all([
+        const [categoriesRes, transactionsRes, goalsRes] = await Promise.all([
             supabase.from("categories").select(CATEGORY_COLUMNS).order("created_at"),
             supabase.from("transactions").select(TRANSACTION_COLUMNS).order("occurred_at"),
+            supabase.from("goals").select(GOAL_COLUMNS).order("created_at"),
         ])
-        const failed = categoriesRes.error ? categoriesRes : transactionsRes.error ? transactionsRes : null
+        const failed = [categoriesRes, transactionsRes, goalsRes].find((r) => r.error)
         if (failed?.error) {
             return { ok: false, network: isNetworkError(failed.error, failed.status), message: failed.error.message }
         }
@@ -191,6 +221,12 @@ export async function fetchRemote(
                     budget: c.budget == null ? null : Number(c.budget),
                 })),
                 entries: (transactionsRes.data as TransactionRow[]).map(rowToEntry),
+                goals: (goalsRes.data as Goal[]).map((g) => ({
+                    ...g,
+                    target: Number(g.target),
+                    saved: Number(g.saved),
+                    color: normalizeColor(g.color),
+                })),
             },
         }
     } catch (err) {
@@ -204,6 +240,8 @@ const storageKey = (userId: string) => `cashlog:v1:${userId}`
 interface Snapshot {
     entries: (Omit<LogEntry, "date"> & { date: string })[]
     categories: Category[]
+    // ذخیره‌های قدیمی هدف نداشتند
+    goals?: Goal[]
     queue: Op[]
     lastSyncedAt: number | null
 }
@@ -216,6 +254,7 @@ export function loadSnapshot(userId: string) {
         return {
             entries: snapshot.entries.map((e) => ({ ...e, date: new Date(e.date) })),
             categories: snapshot.categories,
+            goals: snapshot.goals ?? [],
             queue: snapshot.queue,
             lastSyncedAt: snapshot.lastSyncedAt,
         }
@@ -226,12 +265,13 @@ export function loadSnapshot(userId: string) {
 
 export function saveSnapshot(
     userId: string,
-    data: { entries: LogEntry[]; categories: Category[]; queue: Op[]; lastSyncedAt: number | null }
+    data: { entries: LogEntry[]; categories: Category[]; goals: Goal[]; queue: Op[]; lastSyncedAt: number | null }
 ) {
     try {
         const snapshot: Snapshot = {
             entries: data.entries.map((e) => ({ ...e, date: e.date.toISOString() })),
             categories: data.categories,
+            goals: data.goals,
             queue: data.queue,
             lastSyncedAt: data.lastSyncedAt,
         }

@@ -28,6 +28,16 @@ export interface Category {
     budget?: number | null;
 }
 
+export interface Goal {
+    id: string;
+    label: string;
+    target: number;
+    saved: number;
+    color: string;
+    // تاریخ میلادی به شکل YYYY-MM-DD؛ null یعنی بدون موعد
+    deadline: string | null;
+}
+
 export interface ChartItem {
     id: string;
     category: string;

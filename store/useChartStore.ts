@@ -13,7 +13,7 @@ import {
   sameData,
   saveSnapshot,
 } from "@/lib/sync";
-import { Category, LogEntry, LogKind, YearlyLog } from "@/lib/types";
+import { Category, Goal, LogEntry, LogKind, YearlyLog } from "@/lib/types";
 import { getPersianYearMonth } from "@/lib/utils";
 import { toast } from "@/store/useToastStore";
 import { create } from "zustand";
@@ -23,6 +23,7 @@ interface LogStore {
   entries: LogEntry[];
   logs: YearlyLog[];
   categories: Category[];
+  goals: Goal[];
   queue: Op[];
 
   isLoading: boolean;
@@ -44,6 +45,10 @@ interface LogStore {
   addCategory: (kind: LogKind, label: string, color?: string, budget?: number | null) => void;
   updateCategory: (id: string, changes: Partial<Pick<Category, "label" | "color" | "budget">>) => void;
   removeCategory: (id: string) => void;
+
+  addGoal: (goal: Omit<Goal, "id" | "color"> & { color?: string }) => void;
+  updateGoal: (id: string, changes: Partial<Omit<Goal, "id">>) => void;
+  removeGoal: (id: string) => void;
 }
 
 // گروه‌بندی تراکنش‌ها بر اساس سال و ماه شمسی
@@ -79,6 +84,7 @@ const emptyState = {
   entries: [],
   logs: [],
   categories: [],
+  goals: [],
   queue: [],
   isLoading: false,
   isSyncing: false,
@@ -89,17 +95,17 @@ export const useLogStore = create<LogStore>()((set, get) => {
   const supabase = createClient();
 
   const setData = (data: LocalData) =>
-    set({ entries: data.entries, categories: data.categories, logs: groupByMonth(data.entries) });
+    set({ entries: data.entries, categories: data.categories, goals: data.goals, logs: groupByMonth(data.entries) });
 
   const persist = () => {
-    const { userId, entries, categories, queue, lastSyncedAt } = get();
-    if (userId) saveSnapshot(userId, { entries, categories, queue, lastSyncedAt });
+    const { userId, entries, categories, goals, queue, lastSyncedAt } = get();
+    if (userId) saveSnapshot(userId, { entries, categories, goals, queue, lastSyncedAt });
   };
 
   // تغییر محلی + صف برای ارسال به سرور
   const commit = (op: Op) => {
-    const { entries, categories, queue } = get();
-    setData(applyOp({ entries, categories }, op));
+    const { entries, categories, goals, queue } = get();
+    setData(applyOp({ entries, categories, goals }, op));
     set({ queue: enqueue(queue, op) });
     persist();
     void get().sync();
@@ -126,7 +132,7 @@ export const useLogStore = create<LogStore>()((set, get) => {
         lastSyncedAt: snapshot?.lastSyncedAt ?? null,
         isLoading: !snapshot,
       });
-      setData(snapshot ?? { entries: [], categories: [] });
+      setData(snapshot ?? { entries: [], categories: [], goals: [] });
       void get().sync();
     },
 
@@ -164,8 +170,8 @@ export const useLogStore = create<LogStore>()((set, get) => {
         }
 
         const next = get().queue.reduce(applyOp, remote.data);
-        const { entries, categories } = get();
-        if (!sameData(next, { entries, categories })) setData(next);
+        const { entries, categories, goals } = get();
+        if (!sameData(next, { entries, categories, goals })) setData(next);
         set({ isOnline: true, lastSyncedAt: Date.now() });
         persist();
       } finally {
@@ -234,6 +240,34 @@ export const useLogStore = create<LogStore>()((set, get) => {
 
     removeCategory: (id) => {
       commit({ opId: newOpId(), type: "cat.delete", id });
+    },
+
+    addGoal: ({ color, ...goal }) => {
+      const label = goal.label.trim();
+      if (!label) return;
+      commit({
+        opId: newOpId(),
+        type: "goal.upsert",
+        row: {
+          ...goal,
+          id: crypto.randomUUID(),
+          label,
+          saved: Math.max(0, goal.saved),
+          color: color ?? suggestColor(get().goals.map((g) => g.color)),
+        },
+      });
+    },
+
+    updateGoal: (id, changes) => {
+      const current = get().goals.find((g) => g.id === id);
+      if (!current) return;
+      const label = changes.label?.trim() || current.label;
+      const saved = Math.max(0, changes.saved ?? current.saved);
+      commit({ opId: newOpId(), type: "goal.upsert", row: { ...current, ...changes, label, saved } });
+    },
+
+    removeGoal: (id) => {
+      commit({ opId: newOpId(), type: "goal.delete", id });
     },
   };
 });

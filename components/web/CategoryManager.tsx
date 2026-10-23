@@ -8,6 +8,7 @@ import { Dialog, DialogBody, DialogContent, DialogNav } from "@/components/ui/di
 import { CategoryAvatar } from "@/components/web/Avatars"
 import { ColorPicker } from "@/components/web/ColorPicker"
 import { Group, Row } from "@/components/web/Group"
+import { MoneyInput } from "@/components/web/MoneyInput"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { suggestColor } from "@/lib/palette"
 import { Category, LogKind } from "@/lib/types"
@@ -16,16 +17,6 @@ import { useLogStore } from "@/store/useChartStore"
 import { toast } from "@/store/useToastStore"
 
 const FORM_ID = "category-form"
-
-// ارقام فارسی/عربی را هم می‌پذیرد و فقط عدد نگه می‌دارد
-function toDigits(value: string) {
-    return value
-        .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
-        .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-        .replace(/\D/g, "")
-        .replace(/^0+/, "")
-        .slice(0, 15)
-}
 
 interface CategoryFormProps {
     kind: LogKind
@@ -44,13 +35,13 @@ function CategoryForm({ kind, category, onDone }: CategoryFormProps) {
     const [color, setColor] = useState(
         () => category?.color ?? suggestColor(categories.filter((c) => c.kind === kind).map((c) => c.color))
     )
-    const [budgetDigits, setBudgetDigits] = useState(category?.budget ? String(category.budget) : "")
+    const [budgetValue, setBudgetValue] = useState(category?.budget ?? null)
     const [confirmDelete, setConfirmDelete] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     const usedCount = category ? entries.filter((e) => e.key === category.id).length : 0
     const trimmed = label.trim()
-    const budget = kind === "cost" && budgetDigits ? Number(budgetDigits) : null
+    const budget = kind === "cost" ? budgetValue : null
     const unchanged =
         category && trimmed === category.label && color === category.color && budget === (category.budget ?? null)
 
@@ -124,18 +115,7 @@ function CategoryForm({ kind, category, onDone }: CategoryFormProps) {
                                     : "اختیاری؛ اگر بگذاری، در خانه می‌بینی چقدر از آن خرج شده."
                             }
                         >
-                            <div className="flex items-center gap-3 px-4">
-                                <input
-                                    value={budget ? formatMoney(budget) : ""}
-                                    onChange={(e) => setBudgetDigits(toDigits(e.target.value))}
-                                    placeholder="بدون بودجه"
-                                    inputMode="numeric"
-                                    enterKeyHint="done"
-                                    aria-label="بودجهٔ ماهانه"
-                                    className="num h-[52px] min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-muted-foreground/70"
-                                />
-                                <span className="text-[15px] text-muted-foreground">تومان</span>
-                            </div>
+                            <MoneyInput value={budget} onChange={setBudgetValue} placeholder="بدون بودجه" label="بودجهٔ ماهانه" />
                         </Group>
                     )}
 

@@ -7,6 +7,7 @@ import { Dialog, DialogBody, DialogContent, DialogNav } from "@/components/ui/di
 import { AnimatedNumber } from "@/components/web/AnimatedNumber"
 import { buildChartItems, CategoryBreakdown, SpendingChart } from "@/components/web/Chart"
 import { CategoryAvatar } from "@/components/web/Avatars"
+import { Goals } from "@/components/web/Goals"
 import { Group, Row } from "@/components/web/Group"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { Category, LogEntry, LogKind } from "@/lib/types"
@@ -43,9 +44,9 @@ function Stat({ label, value, kind }: { label: string; value: number; kind: LogK
                     <AnimatedNumber value={value} />
                 </p>
             </div>
-            <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-tint text-primary">
+            {/* <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-tint text-primary">
                 <Plus className="size-4" strokeWidth={2.4} />
-            </span>
+            </span> */}
         </button>
     )
 }
@@ -57,8 +58,7 @@ function SummaryCard({ income, costs }: { income: number; costs: number }) {
     return (
         <section className="overflow-hidden rounded-xl bg-card">
             <div className="px-4 pt-4 pb-3">
-                <p className="text-[13px] text-muted-foreground">مانده این ماه</p>
-                <p className={cn("mt-0.5 text-[34px] leading-tight font-bold", balance < 0 && "text-destructive")}>
+                <p className={cn("mt-0.5 text-[34px] leading-tight font-bold", balance < 0 ? "text-destructive" : "text-success")}>
                     <AnimatedNumber value={balance} />
                     <span className="ms-1.5 text-[15px] font-medium text-muted-foreground">تومان</span>
                 </p>
@@ -122,10 +122,7 @@ function Budgets({ entries, categories }: { entries: LogEntry[]; categories: Cat
     const totalSpent = rows.reduce((sum, r) => sum + r.spent, 0)
 
     return (
-        <Group
-            title="بودجهٔ این ماه"
-            footer={`مجموع: ${formatMoney(totalSpent)} از ${formatMoney(totalBudget)} تومان`}
-        >
+        <Group>
             {rows.map(({ category, budget, spent }) => {
                 const over = spent > budget
                 const percent = Math.round((spent / budget) * 100)
@@ -233,6 +230,7 @@ export function HomeView() {
                 />
             </div>
             {kind === "cost" && <Budgets entries={entries} categories={categories} />}
+            <Goals />
 
             <Dialog open={breakdownOpen && items.length > 0} onOpenChange={setBreakdownOpen}>
                 <DialogContent>
