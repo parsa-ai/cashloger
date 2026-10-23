@@ -3,16 +3,32 @@
 import { CategoryAvatar } from "@/components/web/Avatars"
 import { Row } from "@/components/web/Group"
 import { formatMoney } from "@/lib/money"
-import { Category, LogEntry } from "@/lib/types"
+import { Category, Goal, LogEntry } from "@/lib/types"
+import { navigate } from "@/lib/nav"
 import { cn, haptic, UNCATEGORIZED_LABEL } from "@/lib/utils"
 import { useUiStore } from "@/store/useUiStore"
 import { useMoneyUnit } from "@/store/useMoneyUnitStore"
 
-export function TransactionRow({ entry, category, showDate }: { entry: LogEntry; category?: Category; showDate?: boolean }) {
+// تراکنش هدف پس‌انداز با لمس، همان هدف را در صفحهٔ اهداف باز می‌کند
+export function TransactionRow({
+    entry,
+    category,
+    goal,
+    showDate,
+}: {
+    entry: LogEntry
+    category?: Category
+    goal?: Goal
+    showDate?: boolean
+}) {
     const unit = useMoneyUnit()
     const openEdit = useUiStore((s) => s.openEdit)
+    const openGoal = useUiStore((s) => s.openGoal)
     const isIncome = entry.mode === "increase"
-    const label = category?.label ?? UNCATEGORIZED_LABEL
+    const label = entry.goal
+        ? `${isIncome ? "برداشت از" : "پس‌انداز برای"} ${goal?.label ?? "هدف"}`
+        : category?.label ?? UNCATEGORIZED_LABEL
+    const color = entry.goal ? goal?.color : category?.color
     const when = showDate
         ? entry.date.toLocaleDateString("fa-IR", { day: "numeric", month: "long" })
         : entry.date.toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" })
@@ -21,9 +37,12 @@ export function TransactionRow({ entry, category, showDate }: { entry: LogEntry;
         <Row
             onClick={() => {
                 haptic()
-                openEdit(entry)
+                if (entry.goal) {
+                    navigate("/goals")
+                    openGoal(entry.goal)
+                } else openEdit(entry)
             }}
-            leading={<CategoryAvatar label={label} color={category?.color} size={40} />}
+            leading={<CategoryAvatar label={goal?.label ?? label} color={color} size={40} />}
             title={label}
             subtitle={entry.description ? `${entry.description} · ${when}` : when}
             trailing={

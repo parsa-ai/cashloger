@@ -7,8 +7,9 @@ import { Dialog, DialogBody, DialogContent, DialogNav } from "@/components/ui/di
 import { AnimatedNumber } from "@/components/web/AnimatedNumber"
 import { buildChartItems, CategoryBreakdown, SpendingChart } from "@/components/web/Chart"
 import { CategoryAvatar } from "@/components/web/Avatars"
-import { Goals } from "@/components/web/Goals"
+import { GoalsLink } from "@/components/web/Goals"
 import { Group, Row } from "@/components/web/Group"
+import { NavLink } from "@/components/web/NavLink"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { formatMoney } from "@/lib/money"
 import { Category, LogEntry, LogKind } from "@/lib/types"
@@ -52,9 +53,10 @@ function Stat({ label, value, kind }: { label: string; value: number; kind: LogK
 }
 
 
-function SummaryCard({ income, costs }: { income: number; costs: number }) {
+// موجودی = درآمد − هزینه − آنچه به اهداف پس‌انداز رفته
+function SummaryCard({ income, costs, saved }: { income: number; costs: number; saved: number }) {
     const unit = useMoneyUnit()
-    const balance = income - costs
+    const balance = income - costs - saved
 
     return (
         <section className="overflow-hidden rounded-xl bg-card">
@@ -63,6 +65,12 @@ function SummaryCard({ income, costs }: { income: number; costs: number }) {
                     <AnimatedNumber value={balance} />
                     <span className="ms-1.5 text-[15px] font-medium text-muted-foreground">{unit.label}</span>
                 </p>
+                {saved !== 0 && (
+                    <NavLink href="/goals" className="press mt-0.5 inline-block text-[13px] text-muted-foreground">
+                        <span className="num">{formatMoney(Math.abs(saved), unit)}</span>{" "}
+                        {saved > 0 ? "به پس‌انداز رفت" : "از پس‌انداز برگشت"}
+                    </NavLink>
+                )}
             </div>
             <div className="grid grid-cols-2 border-t border-separator [&>:first-child]:border-e [&>:first-child]:border-separator">
                 <Stat label="درآمد" value={income} kind="income" />
@@ -121,7 +129,7 @@ function Budgets({ entries, categories }: { entries: LogEntry[]; categories: Cat
     if (rows.length === 0) return null
 
     return (
-        <Group>
+        <Group title="بودجهٔ این ماه">
             {rows.map(({ category, budget, spent }) => {
                 const over = spent > budget
                 const percent = Math.round((spent / budget) * 100)
@@ -186,14 +194,16 @@ export function HomeView() {
     const date = useDateStore((s) => s.date) || new Date()
     const entries = useMonthEntries(date)
 
-    const { income, costs } = useMemo(() => {
+    const { income, costs, saved } = useMemo(() => {
         let income = 0
         let costs = 0
+        let saved = 0
         for (const entry of entries) {
-            if (entry.mode === "increase") income += entry.visitors
+            if (entry.goal) saved += entry.mode === "decrease" ? entry.visitors : -entry.visitors
+            else if (entry.mode === "increase") income += entry.visitors
             else costs += entry.visitors
         }
-        return { income, costs }
+        return { income, costs, saved }
     }, [entries])
 
     const items = useMemo(
@@ -206,7 +216,7 @@ export function HomeView() {
     return (
         <div className="space-y-6 pt-2">
             <div className="space-y-6">
-                <SummaryCard income={income} costs={costs} />
+                <SummaryCard income={income} costs={costs} saved={saved} />
                 <SegmentedControl
                     value={kind}
                     onChange={setKind}
@@ -229,7 +239,7 @@ export function HomeView() {
                 />
             </div>
             {kind === "cost" && <Budgets entries={entries} categories={categories} />}
-            <Goals />
+            <GoalsLink />
 
             <Dialog open={breakdownOpen && items.length > 0} onOpenChange={setBreakdownOpen}>
                 <DialogContent>

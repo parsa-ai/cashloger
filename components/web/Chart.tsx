@@ -20,7 +20,8 @@ export function buildChartItems(entries: LogEntry[], categories: Category[], isC
     const mode = isCosts ? "decrease" : "increase"
     const totals = new Map<string | null, number>()
     for (const entry of entries) {
-        if (entry.mode !== mode) continue
+        // واریز و برداشت اهداف پس‌انداز درآمد یا هزینه حساب نمی‌شوند
+        if (entry.mode !== mode || entry.goal) continue
         const key = entry.key && categories.some((c) => c.id === entry.key) ? entry.key : null
         totals.set(key, (totals.get(key) ?? 0) + entry.visitors)
     }

@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 
+import { goalBalances } from "@/lib/goals"
 import { getPersianYearMonth } from "@/lib/utils"
 import { LogEntry, LogKind } from "@/lib/types"
 import { useLogStore } from "@/store/useChartStore"
@@ -27,4 +28,11 @@ export function useCategoriesByUsage(kind: LogKind) {
             .sort((a, b) => b.n - a.n || a.i - b.i)
             .map(({ c }) => c)
     }, [categories, entries, kind])
+}
+
+// موجودی فعلی هر هدف (مبلغ اولیه + تراکنش‌های هدف)
+export function useGoalBalances() {
+    const goals = useLogStore((s) => s.goals)
+    const entries = useLogStore((s) => s.entries)
+    return useMemo(() => goalBalances(goals, entries), [goals, entries])
 }

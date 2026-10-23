@@ -1,6 +1,6 @@
 import { oklchToHex, UNCATEGORIZED_COLOR } from "@/lib/palette"
 import { MoneyUnit, toUnit, unitDecimals } from "@/lib/money"
-import { Category, LogEntry } from "@/lib/types"
+import { Category, Goal, LogEntry } from "@/lib/types"
 import { getPersianYearMonth, UNCATEGORIZED_LABEL } from "@/lib/utils"
 
 const MONEY_FORMAT = "#,##0"
@@ -27,7 +27,13 @@ function argb(color: string) {
 }
 
 // ساخت فایل اکسل (راست‌به‌چپ) با سه شیت: تراکنش‌ها، خلاصهٔ ماهانه و دسته‌بندی‌ها
-export async function exportToExcel(entries: LogEntry[], categories: Category[], fileName: string, unit: MoneyUnit) {
+export async function exportToExcel(
+    entries: LogEntry[],
+    categories: Category[],
+    goals: Goal[],
+    fileName: string,
+    unit: MoneyUnit
+) {
     const { default: ExcelJS } = await import("exceljs")
 
     const workbook = new ExcelJS.Workbook()
@@ -35,7 +41,9 @@ export async function exportToExcel(entries: LogEntry[], categories: Category[],
     workbook.created = new Date()
 
     const money = (toman: number) => Number(toUnit(toman, unit).toFixed(unitDecimals(unit)))
-    const categoryOf = (entry: LogEntry) => categories.find((c) => c.id === entry.key)
+    // تراکنش هدف به جای دسته، خود هدف را نشان می‌دهد
+    const categoryOf = (entry: LogEntry): { label: string; color: string } | undefined =>
+        entry.goal ? goals.find((g) => g.id === entry.goal) : categories.find((c) => c.id === entry.key)
     const sorted = [...entries].sort((a, b) => a.date.getTime() - b.date.getTime())
 
     const styleHeader = (sheet: import("exceljs").Worksheet) => {
@@ -63,7 +71,7 @@ export async function exportToExcel(entries: LogEntry[], categories: Category[],
         const row = txSheet.addRow({
             fa: persianDate(entry.date),
             date: entry.date,
-            kind: isIncome ? "درآمد" : "هزینه",
+            kind: entry.goal ? (isIncome ? "برداشت از پس‌انداز" : "پس‌انداز") : isIncome ? "درآمد" : "هزینه",
             category: category?.label ?? UNCATEGORIZED_LABEL,
             amount: money(isIncome ? entry.visitors : -entry.visitors),
             description: entry.description ?? "",
@@ -86,26 +94,30 @@ export async function exportToExcel(entries: LogEntry[], categories: Category[],
         { header: "ماه", key: "month", width: 18 },
         { header: `درآمد (${unit.label})`, key: "income", width: 16, style: { numFmt: MONEY_FORMAT } },
         { header: `هزینه (${unit.label})`, key: "cost", width: 16, style: { numFmt: MONEY_FORMAT } },
+        { header: `پس‌انداز (${unit.label})`, key: "saved", width: 16, style: { numFmt: MONEY_FORMAT } },
         { header: `مانده (${unit.label})`, key: "balance", width: 16, style: { numFmt: MONEY_FORMAT } },
     ]
-    const months = new Map<string, { label: string; income: number; cost: number }>()
+    const months = new Map<string, { label: string; income: number; cost: number; saved: number }>()
     for (const entry of sorted) {
         const { year, month } = getPersianYearMonth(entry.date)
         const key = `${year}-${month}`
-        const item = months.get(key) ?? { label: persianMonthName(entry.date), income: 0, cost: 0 }
-        if (entry.mode === "increase") item.income += entry.visitors
+        const item = months.get(key) ?? { label: persianMonthName(entry.date), income: 0, cost: 0, saved: 0 }
+        if (entry.goal) item.saved += entry.mode === "decrease" ? entry.visitors : -entry.visitors
+        else if (entry.mode === "increase") item.income += entry.visitors
         else item.cost += entry.visitors
         months.set(key, item)
     }
     for (const item of months.values()) {
+        const balance = item.income - item.cost - item.saved
         const row = monthSheet.addRow({
             month: item.label,
             income: money(item.income),
             cost: money(item.cost),
-            balance: money(item.income - item.cost),
+            saved: money(item.saved),
+            balance: money(balance),
         })
-        formatMoneyCells(row, ["income", "cost", "balance"])
-        row.getCell("balance").font = { bold: true, color: { argb: item.income >= item.cost ? "FF1E8E4E" : "FFC0392B" } }
+        formatMoneyCells(row, ["income", "cost", "saved", "balance"])
+        row.getCell("balance").font = { bold: true, color: { argb: balance >= 0 ? "FF1E8E4E" : "FFC0392B" } }
     }
     styleHeader(monthSheet)
 
@@ -119,7 +131,7 @@ export async function exportToExcel(entries: LogEntry[], categories: Category[],
     ]
     const rows = [...categories, null].map((category) => {
         const matching = entries.filter((e) =>
-            category ? e.key === category.id : !categories.some((c) => c.id === e.key)
+            category ? e.key === category.id : !e.goal && !categories.some((c) => c.id === e.key)
         )
         return { category, matching }
     })

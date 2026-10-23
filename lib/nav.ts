@@ -2,7 +2,7 @@
 export const TABS = ["/", "/logs"] as const
 
 // ترتیب همهٔ صفحه‌ها برای جهت انیمیشن جابه‌جایی
-const ORDER: Record<string, number> = { "/": 0, "/logs": 1, "/user": 2, "/categories": 3 }
+const ORDER: Record<string, number> = { "/": 0, "/logs": 1, "/user": 2, "/categories": 3, "/goals": 4 }
 
 export function routeIndex(pathname: string) {
     return ORDER[pathname] ?? -1

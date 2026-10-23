@@ -31,6 +31,7 @@ export function ExportSheet({ open, onOpenChange: setOpen }: { open: boolean; on
 
     const allEntries = useLogStore((s) => s.entries)
     const categories = useLogStore((s) => s.categories)
+    const goals = useLogStore((s) => s.goals)
     const date = useDateStore((s) => s.date) || new Date()
     const monthEntries = useMonthEntries(date)
 
@@ -41,7 +42,7 @@ export function ExportSheet({ open, onOpenChange: setOpen }: { open: boolean; on
         try {
             const { year, month } = getPersianYearMonth(date)
             const fileName = scope === "month" ? `cashlog-${year}-${month}.xlsx` : "cashlog-all.xlsx"
-            await exportToExcel(entries, categories, fileName, unit)
+            await exportToExcel(entries, categories, goals, fileName, unit)
             haptic([10, 40, 10])
             toast("فایل اکسل آماده شد", "success")
             setOpen(false)

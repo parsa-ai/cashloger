@@ -17,11 +17,13 @@ import useDateStore from "@/store/useYearStore"
 const PARENTS: Record<string, string> = {
     "/user": "/",
     "/categories": "/user",
+    "/goals": "/",
 }
 
 const TITLES: Record<string, string> = {
     "/user": "پروفایل",
     "/categories": "دسته‌بندی‌ها",
+    "/goals": "اهداف پس‌انداز",
 }
 
 // «در حال ارسال» فقط اگر بیش از یک لحظه طول بکشد، تا با هر ثبت چشمک نزند

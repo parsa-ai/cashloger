@@ -8,6 +8,7 @@ import { Category, Goal, LogEntry, LogKind } from "@/lib/types"
 export interface TransactionRow {
     id: string
     category_id: string | null
+    goal_id: string | null
     kind: LogKind
     amount: number
     description: string | null
@@ -31,7 +32,7 @@ export interface LocalData {
     goals: Goal[]
 }
 
-export const TRANSACTION_COLUMNS = "id, category_id, kind, amount, description, occurred_at"
+export const TRANSACTION_COLUMNS = "id, category_id, goal_id, kind, amount, description, occurred_at"
 export const CATEGORY_COLUMNS = "id, kind, label, color, budget"
 export const GOAL_COLUMNS = "id, label, target, saved, color, deadline"
 
@@ -39,6 +40,7 @@ export function rowToEntry(row: TransactionRow): LogEntry {
     return {
         id: row.id,
         key: row.category_id,
+        goal: row.goal_id ?? null,
         date: new Date(row.occurred_at),
         visitors: Number(row.amount),
         description: row.description || undefined,
@@ -49,7 +51,8 @@ export function rowToEntry(row: TransactionRow): LogEntry {
 export function entryToRow(entry: LogEntry): TransactionRow {
     return {
         id: entry.id,
-        category_id: entry.key,
+        category_id: entry.goal ? null : entry.key,
+        goal_id: entry.goal ?? null,
         kind: entry.mode === "increase" ? "income" : "cost",
         amount: entry.visitors,
         description: entry.description || null,
@@ -83,7 +86,7 @@ export function sameData(a: LocalData, b: LocalData) {
     )
         return false
     const entryKey = (e: LogEntry) =>
-        `${e.id}|${e.key}|${e.date.getTime()}|${e.visitors}|${e.description ?? ""}|${e.mode}`
+        `${e.id}|${e.key}|${e.goal ?? ""}|${e.date.getTime()}|${e.visitors}|${e.description ?? ""}|${e.mode}`
     const categoryKey = (c: Category) => `${c.id}|${c.kind}|${c.label}|${c.color}|${c.budget ?? ""}`
     const goalKey = (g: Goal) => `${g.id}|${g.label}|${g.target}|${g.saved}|${g.color}|${g.deadline ?? ""}`
     return (
@@ -130,8 +133,13 @@ export function applyOp(data: LocalData, op: Op): LocalData {
                 goals: exists ? data.goals.map((g) => (g.id === op.row.id ? op.row : g)) : [...data.goals, op.row],
             }
         }
+        // تراکنش‌های هدف هم با آن حذف می‌شوند و پولش به موجودی برمی‌گردد
         case "goal.delete":
-            return { ...data, goals: data.goals.filter((g) => g.id !== op.id) }
+            return {
+                ...data,
+                goals: data.goals.filter((g) => g.id !== op.id),
+                entries: data.entries.filter((e) => e.goal !== op.id),
+            }
     }
 }
 
@@ -252,7 +260,7 @@ export function loadSnapshot(userId: string) {
         if (!raw) return null
         const snapshot = JSON.parse(raw) as Snapshot
         return {
-            entries: snapshot.entries.map((e) => ({ ...e, date: new Date(e.date) })),
+            entries: snapshot.entries.map((e) => ({ ...e, goal: e.goal ?? null, date: new Date(e.date) })),
             categories: snapshot.categories,
             goals: snapshot.goals ?? [],
             queue: snapshot.queue,

@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef, useState } from "react"
 import { usePathname } from "next/navigation"
 
 import { CategoryManager } from "@/components/web/CategoryManager"
+import { GoalsView } from "@/components/web/Goals"
 import { HomeView } from "@/components/web/HomeView"
 import { TransactionList } from "@/components/web/TransactionList"
 import { UserView } from "@/components/web/UserView"
@@ -15,6 +16,7 @@ const VIEWS: Record<string, React.ComponentType> = {
     "/logs": TransactionList,
     "/user": UserView,
     "/categories": CategoryManager,
+    "/goals": GoalsView,
 }
 
 const ANIMATIONS = ["animate-page-in", "animate-slide-next", "animate-slide-prev"]

@@ -17,6 +17,15 @@ interface UiStore {
     openAdd: (kind?: LogKind, category?: string) => void
     openEdit: (entry: LogEntry) => void
     setSheetOpen: (open: boolean) => void
+
+    // شیت هدف پس‌انداز (از صفحهٔ اهداف یا با لمس تراکنش هدف)؛ بدون شناسه یعنی هدف جدید
+    goalOpen: boolean
+    goalId: string | null
+    goalEditing: boolean
+    goalKey: number
+    openGoal: (id?: string) => void
+    setGoalOpen: (open: boolean) => void
+    setGoalEditing: (editing: boolean) => void
 }
 
 export const useUiStore = create<UiStore>((set, get) => ({
@@ -38,4 +47,12 @@ export const useUiStore = create<UiStore>((set, get) => ({
     openEdit: (entry) => set({ sheetOpen: true, editing: entry, sheetKey: get().sheetKey + 1 }),
     // موقع بستن، editing می‌ماند تا محتوای شیت تا آخر انیمیشن خروج عوض نشود
     setSheetOpen: (sheetOpen) => set({ sheetOpen }),
+
+    goalOpen: false,
+    goalId: null,
+    goalEditing: false,
+    goalKey: 0,
+    openGoal: (id) => set({ goalOpen: true, goalId: id ?? null, goalEditing: !id, goalKey: get().goalKey + 1 }),
+    setGoalOpen: (goalOpen) => set({ goalOpen }),
+    setGoalEditing: (goalEditing) => set({ goalEditing }),
 }))

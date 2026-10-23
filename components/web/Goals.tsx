@@ -1,58 +1,30 @@
 "use client"
 
-import { SubmitEvent, useState } from "react"
-import { Check, Minus, Pencil, Plus } from "lucide-react"
+import { SubmitEvent, useEffect, useMemo, useState } from "react"
+import { Check, Minus, Pencil, PiggyBank, Plus, Trash2 } from "lucide-react"
+import { happy } from "blobatar/expression"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogContent, DialogNav } from "@/components/ui/dialog"
 import { CategoryAvatar } from "@/components/web/Avatars"
 import { ColorPicker } from "@/components/web/ColorPicker"
-import { Group, Row } from "@/components/web/Group"
+import { EmptyState } from "@/components/web/EmptyState"
+import { Group, IconTile, Row } from "@/components/web/Group"
 import { MoneyInput } from "@/components/web/MoneyInput"
 import { PersianCalendar } from "@/components/web/PersianCalendar"
+import { formatDeadline, fromDateKey, goalProgress, netSaved, toDateKey } from "@/lib/goals"
 import { formatAmountWords, formatMoney } from "@/lib/money"
 import { suggestColor } from "@/lib/palette"
 import { Goal } from "@/lib/types"
 import { cn, haptic } from "@/lib/utils"
+import { useGoalBalances, useMonthEntries } from "@/store/selectors"
 import { useLogStore } from "@/store/useChartStore"
 import { toast } from "@/store/useToastStore"
 import { useMoneyUnit } from "@/store/useMoneyUnitStore"
+import { useUiStore } from "@/store/useUiStore"
+import useDateStore from "@/store/useYearStore"
 
 const FORM_ID = "goal-form"
-const DAY = 24 * 60 * 60 * 1000
-
-// موعد به شکل YYYY-MM-DD (تاریخ محلی، بدون ساعت) ذخیره می‌شود
-function toDateKey(date: Date) {
-    const pad = (n: number) => String(n).padStart(2, "0")
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
-
-function fromDateKey(key: string) {
-    const [y, m, d] = key.split("-").map(Number)
-    return new Date(y, m - 1, d)
-}
-
-function formatDeadline(key: string) {
-    return fromDateKey(key).toLocaleDateString("fa-IR", { day: "numeric", month: "long", year: "numeric" })
-}
-
-// چقدر مانده و تا موعد ماهی چقدر باید کنار گذاشت
-function goalProgress(goal: Goal) {
-    const remaining = Math.max(goal.target - goal.saved, 0)
-    const ratio = Math.min(goal.saved / goal.target, 1)
-    const done = remaining === 0
-
-    let perMonth: number | null = null
-    let overdue = false
-    if (goal.deadline && !done) {
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const days = Math.round((fromDateKey(goal.deadline).getTime() - today.getTime()) / DAY)
-        if (days < 0) overdue = true
-        else perMonth = remaining / Math.max(1, Math.ceil(days / 30.44))
-    }
-    return { remaining, ratio, done, perMonth, overdue }
-}
 
 function ProgressBar({ ratio, color, className }: { ratio: number; color: string; className?: string }) {
     return (
@@ -65,26 +37,94 @@ function ProgressBar({ ratio, color, className }: { ratio: number; color: string
     )
 }
 
-function GoalDetail({ goal, onEdit }: { goal: Goal; onEdit: () => void }) {
+// واریز و برداشت‌های یک هدف، جدیدترین اول؛ حذف هر کدام با «برگرداندن»
+function GoalHistory({ goalId }: { goalId: string }) {
     const unit = useMoneyUnit()
-    const updateGoal = useLogStore((s) => s.updateGoal)
-    const [amount, setAmount] = useState<number | null>(null)
-    const { remaining, ratio, done, perMonth, overdue } = goalProgress(goal)
+    const entries = useLogStore((s) => s.entries)
+    const removeLog = useLogStore((s) => s.removeLog)
+    const updateLog = useLogStore((s) => s.updateLog)
 
+    const history = useMemo(
+        () => entries.filter((e) => e.goal === goalId).sort((a, b) => b.date.getTime() - a.date.getTime()),
+        [entries, goalId]
+    )
+    if (history.length === 0) return null
+
+    return (
+        <Group title="واریز و برداشت‌ها">
+            {history.map((entry) => {
+                const deposit = entry.mode === "decrease"
+                const Icon = deposit ? Plus : Minus
+                return (
+                    <Row
+                        key={entry.id}
+                        leading={
+                            <span
+                                className={cn(
+                                    "grid size-8 shrink-0 place-items-center rounded-full",
+                                    deposit ? "bg-success/12 text-success" : "bg-fill text-foreground"
+                                )}
+                            >
+                                <Icon className="size-4" strokeWidth={2.4} />
+                            </span>
+                        }
+                        title={deposit ? "واریز" : "برداشت"}
+                        subtitle={entry.date.toLocaleDateString("fa-IR", { day: "numeric", month: "long", year: "numeric" })}
+                        trailing={
+                            <span className="flex items-center gap-1">
+                                <span className={cn("num text-[15px] font-semibold", deposit && "text-success")}>
+                                    {deposit ? "+" : "−"}
+                                    {formatMoney(entry.visitors, unit)}
+                                </span>
+                                <button
+                                    type="button"
+                                    aria-label="حذف"
+                                    onClick={() => {
+                                        haptic()
+                                        removeLog(entry.id)
+                                        toast("حذف شد", "default", { label: "برگرداندن", onClick: () => updateLog(entry) })
+                                    }}
+                                    className="press -me-2 grid size-9 place-items-center text-muted-foreground"
+                                >
+                                    <Trash2 className="size-4" />
+                                </button>
+                            </span>
+                        }
+                    />
+                )
+            })}
+        </Group>
+    )
+}
+
+function GoalDetail({ goal, saved, onEdit }: { goal: Goal; saved: number; onEdit: () => void }) {
+    const unit = useMoneyUnit()
+    const addLog = useLogStore((s) => s.addLog)
+    const removeLog = useLogStore((s) => s.removeLog)
+    const [amount, setAmount] = useState<number | null>(null)
+    const { remaining, ratio, done, perMonth, overdue } = goalProgress(goal, saved)
+
+    // واریز یک هزینه از موجودی است و برداشت پول را به موجودی برمی‌گرداند؛ هر دو در تراکنش‌ها دیده می‌شوند
     const change = (sign: 1 | -1) => {
         if (!amount) return
-        const previous = goal.saved
-        const saved = Math.max(previous + sign * amount, 0)
-        updateGoal(goal.id, { saved })
+        const value = sign === 1 ? amount : Math.min(amount, saved)
+        if (value <= 0) return
+        const id = addLog({
+            key: null,
+            goal: goal.id,
+            visitors: value,
+            date: new Date(),
+            mode: sign === 1 ? "decrease" : "increase",
+        })
         setAmount(null)
 
-        const undo = { label: "برگرداندن", onClick: () => updateGoal(goal.id, { saved: previous }) }
-        if (sign === 1 && saved >= goal.target && previous < goal.target) {
+        const undo = { label: "برگرداندن", onClick: () => removeLog(id) }
+        if (sign === 1 && saved + value >= goal.target && saved < goal.target) {
             haptic([10, 40, 10, 40, 10])
             toast(`به هدف «${goal.label}» رسیدی`, "success", undo)
         } else {
             haptic([10, 40, 10])
-            toast(sign === 1 ? "به پس‌انداز اضافه شد" : "از پس‌انداز برداشته شد", "success", undo)
+            toast(sign === 1 ? "از موجودی به پس‌انداز رفت" : "به موجودی برگشت", "success", undo)
         }
     }
 
@@ -104,7 +144,7 @@ function GoalDetail({ goal, onEdit }: { goal: Goal; onEdit: () => void }) {
                         <CategoryAvatar label={goal.label} color={goal.color} size={44} />
                         <div className="min-w-0 flex-1">
                             <p className="truncate text-[28px] leading-tight font-bold">
-                                <span className="num">{formatMoney(goal.saved, unit)}</span>
+                                <span className="num">{formatMoney(saved, unit)}</span>
                                 <span className="ms-1.5 text-[15px] font-medium text-muted-foreground">{unit.label}</span>
                             </p>
                             <p className="text-[13px] text-muted-foreground">
@@ -139,7 +179,7 @@ function GoalDetail({ goal, onEdit }: { goal: Goal; onEdit: () => void }) {
                 </section>
 
                 <div className="space-y-3">
-                    <Group title="واریز یا برداشت">
+                    <Group title="واریز یا برداشت" footer="واریز از موجودی ماه کم می‌شود و برداشت به آن برمی‌گردد.">
                         <MoneyInput value={amount} onChange={setAmount} placeholder="مبلغ" label="مبلغ واریز یا برداشت" />
                     </Group>
                     <div className="grid grid-cols-2 gap-3">
@@ -147,12 +187,14 @@ function GoalDetail({ goal, onEdit }: { goal: Goal; onEdit: () => void }) {
                             <Plus />
                             واریز
                         </Button>
-                        <Button type="button" variant="secondary" disabled={!amount || goal.saved === 0} onClick={() => change(-1)}>
+                        <Button type="button" variant="secondary" disabled={!amount || saved === 0} onClick={() => change(-1)}>
                             <Minus />
                             برداشت
                         </Button>
                     </div>
                 </div>
+
+                <GoalHistory goalId={goal.id} />
             </DialogBody>
         </>
     )
@@ -228,7 +270,10 @@ function GoalForm({ goal, onDone }: { goal?: Goal; onDone: () => void }) {
                     </Group>
 
                     {!goal && (
-                        <Group title="تا الان کنار گذاشته‌ام" footer="اختیاری؛ بعداً هم می‌توانی واریز کنی.">
+                        <Group
+                            title="تا الان کنار گذاشته‌ام"
+                            footer="اختیاری؛ پولی که از قبل جدا کرده‌ای و از موجودی کم نمی‌شود. بعداً هم می‌توانی واریز کنی."
+                        >
                             <MoneyInput value={saved} onChange={setSaved} placeholder="۰" label="پس‌انداز فعلی" />
                         </Group>
                     )}
@@ -275,7 +320,13 @@ function GoalForm({ goal, onDone }: { goal?: Goal; onDone: () => void }) {
                     </Group>
 
                     {goal && (
-                        <Group footer={confirmDelete ? "برای حذف دوباره بزن." : undefined}>
+                        <Group
+                            footer={
+                                confirmDelete
+                                    ? "برای حذف دوباره بزن. واریز و برداشت‌هایش هم حذف می‌شوند و پولش به موجودی برمی‌گردد."
+                                    : undefined
+                            }
+                        >
                             <Row
                                 onClick={handleDelete}
                                 tone="destructive"
@@ -289,38 +340,92 @@ function GoalForm({ goal, onDone }: { goal?: Goal; onDone: () => void }) {
     )
 }
 
-// اهداف پس‌انداز در خانه: پیشرفت هر هدف، لمس برای واریز/برداشت یا ویرایش
-export function Goals() {
+// شیت هدف: جزئیات (واریز/برداشت) یا فرم ساخت و ویرایش
+function GoalSheet() {
+    const goals = useLogStore((s) => s.goals)
+    const balances = useGoalBalances()
+    const open = useUiStore((s) => s.goalOpen)
+    const goalId = useUiStore((s) => s.goalId)
+    const editing = useUiStore((s) => s.goalEditing)
+    const sheetKey = useUiStore((s) => s.goalKey)
+    const setOpen = useUiStore((s) => s.setGoalOpen)
+    const setEditing = useUiStore((s) => s.setGoalEditing)
+
+    // با ترک صفحهٔ اهداف بسته شود تا برگشتن به آن دوباره بازش نکند
+    useEffect(() => () => setOpen(false), [setOpen])
+
+    // نسخهٔ آخر هدف باز شده تا اگر حذف شد، شیت هنگام بسته شدن همان را نشان دهد
+    const [last, setLast] = useState<Goal | undefined>()
+    const found = goalId ? goals.find((g) => g.id === goalId) : undefined
+    if (found && found !== last) setLast(found)
+    const selected = goalId ? found ?? (last?.id === goalId ? last : undefined) : undefined
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogContent>
+                {editing || !selected ? (
+                    <GoalForm key={sheetKey} goal={selected} onDone={() => setOpen(false)} />
+                ) : (
+                    <GoalDetail
+                        key={sheetKey}
+                        goal={selected}
+                        saved={balances.get(selected.id) ?? selected.saved}
+                        onEdit={() => setEditing(true)}
+                    />
+                )}
+            </DialogContent>
+        </Dialog>
+    )
+}
+
+// صفحهٔ اهداف پس‌انداز: جمع پس‌انداز، پیشرفت هر هدف، لمس برای واریز/برداشت یا ویرایش
+export function GoalsView() {
     const unit = useMoneyUnit()
     const goals = useLogStore((s) => s.goals)
-    const [open, setOpen] = useState(false)
-    // نسخهٔ آخر هدف باز شده تا اگر حذف شد، شیت هنگام بسته شدن همان را نشان دهد
-    const [opened, setOpened] = useState<Goal | undefined>()
-    const [editing, setEditing] = useState(false)
-    const [sheetKey, setSheetKey] = useState(0)
+    const balances = useGoalBalances()
+    const openGoal = useUiStore((s) => s.openGoal)
+    const date = useDateStore((s) => s.date) || new Date()
+    const month = netSaved(useMonthEntries(date))
 
-    const selected = opened && (goals.find((g) => g.id === opened.id) ?? opened)
+    const total = goals.reduce((sum, g) => sum + (balances.get(g.id) ?? 0), 0)
 
-    const openSheet = (goal?: Goal) => {
+    const open = (id?: string) => {
         haptic()
-        setOpened(goal)
-        setEditing(!goal)
-        setSheetKey((k) => k + 1)
-        setOpen(true)
+        openGoal(id)
     }
 
     return (
-        <>
-            <Group
-                title="اهداف پس‌انداز"
-                footer={goals.length === 0 ? "برای چیزی که می‌خواهی بخری هدف بگذار و پیشرفتش را ببین." : undefined}
-            >
+        <div className="space-y-6 pt-2">
+            {goals.length === 0 ? (
+                <EmptyState
+                    expression={happy}
+                    title="هنوز هدفی نداری"
+                    description="برای چیزی که می‌خواهی بخری هدف بگذار؛ هر واریز از موجودی‌ات کم می‌شود و پیشرفتش را می‌بینی."
+                />
+            ) : (
+                <section className="rounded-xl bg-card px-4 pt-4 pb-3">
+                    <p className="text-[13px] text-muted-foreground">جمع پس‌انداز</p>
+                    <p className="text-[34px] leading-tight font-bold">
+                        <span className="num">{formatMoney(total, unit)}</span>
+                        <span className="ms-1.5 text-[15px] font-medium text-muted-foreground">{unit.label}</span>
+                    </p>
+                    {month !== 0 && (
+                        <p className="mt-1 text-[13px] text-muted-foreground">
+                            این ماه <span className="num">{formatMoney(Math.abs(month), unit)}</span>{" "}
+                            {month > 0 ? "کنار گذاشتی" : "برداشتی"}
+                        </p>
+                    )}
+                </section>
+            )}
+
+            <Group>
                 {goals.map((goal) => {
-                    const { ratio, done } = goalProgress(goal)
+                    const saved = balances.get(goal.id) ?? 0
+                    const { ratio, done } = goalProgress(goal, saved)
                     return (
                         <Row
                             key={goal.id}
-                            onClick={() => openSheet(goal)}
+                            onClick={() => open(goal.id)}
                             leading={<CategoryAvatar label={goal.label} color={goal.color} size={32} />}
                             title={goal.label}
                             subtitle={
@@ -333,7 +438,7 @@ export function Goals() {
                             }
                             trailing={
                                 <span className="text-left leading-tight">
-                                    <span className="num block text-[15px] font-semibold">{formatMoney(goal.saved, unit)}</span>
+                                    <span className="num block text-[15px] font-semibold">{formatMoney(saved, unit)}</span>
                                     <span className="block text-[12px] text-muted-foreground">
                                         از <span className="num">{formatMoney(goal.target, unit)}</span>
                                     </span>
@@ -343,7 +448,7 @@ export function Goals() {
                     )
                 })}
                 <Row
-                    onClick={() => openSheet()}
+                    onClick={() => open()}
                     leading={
                         <span className="grid size-8 place-items-center rounded-full bg-tint text-primary">
                             <Plus className="size-5" />
@@ -354,15 +459,38 @@ export function Goals() {
                 />
             </Group>
 
-            <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent>
-                    {editing || !selected ? (
-                        <GoalForm key={sheetKey} goal={selected} onDone={() => setOpen(false)} />
-                    ) : (
-                        <GoalDetail key={sheetKey} goal={selected} onEdit={() => setEditing(true)} />
-                    )}
-                </DialogContent>
-            </Dialog>
-        </>
+            <GoalSheet />
+        </div>
+    )
+}
+
+// ردیف کوچک اهداف در صفحهٔ اصلی که صفحهٔ اهداف را باز می‌کند
+export function GoalsLink() {
+    const unit = useMoneyUnit()
+    const goals = useLogStore((s) => s.goals)
+    const balances = useGoalBalances()
+
+    const saved = goals.reduce((sum, g) => sum + Math.min(balances.get(g.id) ?? 0, g.target), 0)
+    const target = goals.reduce((sum, g) => sum + g.target, 0)
+    const total = goals.reduce((sum, g) => sum + (balances.get(g.id) ?? 0), 0)
+
+    return (
+        <Group>
+            <Row
+                href="/goals"
+                leading={
+                    <IconTile color="oklch(0.65 0.16 25)">
+                        <PiggyBank />
+                    </IconTile>
+                }
+                title="اهداف پس‌انداز"
+                subtitle={
+                    goals.length === 0
+                        ? "برای خریدهای بزرگ هدف بگذار"
+                        : `${goals.length.toLocaleString("fa-IR")} هدف · ${Math.floor((saved / target) * 100).toLocaleString("fa-IR")}٪`
+                }
+                trailing={goals.length > 0 && <span className="num text-[15px] text-muted-foreground">{formatMoney(total, unit)}</span>}
+            />
+        </Group>
     )
 }

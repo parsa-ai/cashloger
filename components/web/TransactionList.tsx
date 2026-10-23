@@ -28,6 +28,7 @@ export function TransactionList() {
 
     const isLoading = useLogStore((s) => s.isLoading)
     const categories = useLogStore((s) => s.categories)
+    const goals = useLogStore((s) => s.goals)
     const date = useDateStore((s) => s.date) || new Date()
     const entries = useMonthEntries(date)
 
@@ -35,12 +36,12 @@ export function TransactionList() {
     const days = useMemo(() => {
         // جستجو در اسم دسته، توضیح و مبلغ (ارقام فارسی هم)
         const q = query.trim().replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0)).replace(/[,٬]/g, "")
-        const labels = new Map(categories.map((c) => [c.id, c.label]))
+        const labels = new Map([...categories, ...goals].map((c) => [c.id, c.label]))
         const filtered = entries.filter((e) => {
             if (filter !== "all" && (filter === "cost" ? e.mode !== "decrease" : e.mode !== "increase")) return false
             if (!q) return true
             return (
-                (e.key ? labels.get(e.key) ?? "" : "").includes(q) ||
+                (labels.get(e.goal ?? e.key ?? "") ?? "").includes(q) ||
                 (e.description ?? "").includes(q) ||
                 String(e.visitors).includes(q)
             )
@@ -51,7 +52,7 @@ export function TransactionList() {
             groups.set(key, [...(groups.get(key) ?? []), entry])
         }
         return [...groups.values()]
-    }, [entries, filter, query, categories])
+    }, [entries, filter, query, categories, goals])
 
     return (
         <div className="space-y-4">
@@ -117,7 +118,12 @@ export function TransactionList() {
                             }
                         >
                             {dayEntries.map((entry) => (
-                                <TransactionRow key={entry.id} entry={entry} category={categories.find((c) => c.id === entry.key)} />
+                                <TransactionRow
+                                    key={entry.id}
+                                    entry={entry}
+                                    category={categories.find((c) => c.id === entry.key)}
+                                    goal={entry.goal ? goals.find((g) => g.id === entry.goal) : undefined}
+                                />
                             ))}
                         </Group>
                     )

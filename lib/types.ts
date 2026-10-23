@@ -8,6 +8,8 @@ export interface LogEntry {
     visitors: number;
     description?: string;
     mode: "increase" | "decrease";
+    // واریز به هدف پس‌انداز (decrease) یا برداشت از آن (increase)؛ این‌ها دسته ندارند
+    goal?: string | null;
 }
 export interface MonthlyLog {
     month: string;
@@ -32,6 +34,7 @@ export interface Goal {
     id: string;
     label: string;
     target: number;
+    // مبلغی که پیش از ثبت هدف کنار گذاشته شده بود؛ بقیه از تراکنش‌های هدف جمع می‌شود
     saved: number;
     color: string;
     // تاریخ میلادی به شکل YYYY-MM-DD؛ null یعنی بدون موعد
