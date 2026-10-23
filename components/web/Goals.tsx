@@ -310,8 +310,8 @@ function GoalForm({ goal, onDone }: { goal?: Goal; onDone: () => void }) {
                                     setDeadline(null)
                                     setCalendarOpen(false)
                                 }}
-                                title="بدون موعد"
-                                tone="primary"
+                                title="حذف"
+                                tone="destructive"
                             />
                         )}
                     </Group>
