@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { ChartPie, ChevronLeft, ChevronRight, Plus, ReceiptText } from "lucide-react"
 import { happy, sleepy } from "blobatar/expression"
 
@@ -113,6 +113,16 @@ export function IntroSlides({ onDone, doneLabel }: { onDone: () => void; doneLab
     ]
     const last = index === slides.length - 1
 
+    // صفحهٔ پشت اسلایدها نباید با کشیدن عمودی تکان بخورد
+    useEffect(() => {
+        const html = document.documentElement
+        const prev = html.style.overflow
+        html.style.overflow = "hidden"
+        return () => {
+            html.style.overflow = prev
+        }
+    }, [])
+
     // در راست‌به‌چپ scrollLeft منفی است؛ قدر مطلقش بس است
     const onScroll = () => {
         const el = trackRef.current
@@ -134,7 +144,7 @@ export function IntroSlides({ onDone, doneLabel }: { onDone: () => void; doneLab
     }
 
     return (
-        <div className="fixed inset-0 z-[55] flex animate-page-in flex-col bg-background">
+        <div className="fixed inset-0 z-[55] flex animate-page-in touch-pan-x flex-col overflow-hidden overscroll-none bg-background">
             <div className="flex justify-end px-2 pt-[calc(env(safe-area-inset-top)+8px)]">
                 <Button
                     variant="plain"
@@ -149,17 +159,20 @@ export function IntroSlides({ onDone, doneLabel }: { onDone: () => void; doneLab
             <div
                 ref={trackRef}
                 onScroll={onScroll}
-                className="no-scrollbar flex flex-1 snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
+                className="no-scrollbar flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-contain"
             >
                 {slides.map((s, i) => (
                     <section
                         key={s.title}
                         aria-hidden={i !== index}
-                        className="flex w-full shrink-0 snap-start snap-always flex-col items-center justify-center px-8 text-center"
+                        className="flex h-full w-full shrink-0 snap-start snap-always flex-col items-center justify-center px-8 text-center"
                     >
-                        <div className="flex h-56 items-center justify-center">{s.art}</div>
-                        <h1 className="mt-8 text-[24px] font-bold">{s.title}</h1>
-                        <p className="mt-2 max-w-sm text-[15px] leading-7 text-muted-foreground">{s.text}</p>
+                        <div className="flex h-[min(14rem,30dvh)] w-full items-center justify-center">{s.art}</div>
+                        {/* ارتفاع ثابت برای متن تا عنوان و تصویر در همهٔ اسلایدها هم‌جا بمانند */}
+                        <div className="mt-6 h-40 w-full max-w-sm">
+                            <h1 className="text-[22px] font-bold">{s.title}</h1>
+                            <p className="mt-2 text-[15px] leading-7 text-muted-foreground">{s.text}</p>
+                        </div>
                     </section>
                 ))}
             </div>
