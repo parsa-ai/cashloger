@@ -23,8 +23,22 @@ function withTime(day: Date, time: Date) {
     return result
 }
 
-// تقویم ماهانهٔ شمسی؛ هفته از شنبه شروع می‌شود و روزهای آینده غیرفعال‌اند
-export function PersianCalendar({ value, onChange }: { value: Date; onChange: (date: Date) => void }) {
+// همان روز ماه، چند ماه بعد
+function monthsLater(date: Date, months: number) {
+    return new Date(date.getFullYear(), date.getMonth() + months, date.getDate())
+}
+
+// تقویم ماهانهٔ شمسی؛ هفته از شنبه شروع می‌شود و روزهای آینده غیرفعال‌اند.
+// با future برعکس است: فقط امروز و بعد از آن (مثلاً برای موعد هدف)
+export function PersianCalendar({
+    value,
+    onChange,
+    future: allowFuture = false,
+}: {
+    value: Date
+    onChange: (date: Date) => void
+    future?: boolean
+}) {
     const today = new Date()
     const [month, setMonth] = useState(() => startOfPersianMonth(value))
     const isCurrentMonth = isSamePersianMonth(month, today)
@@ -47,11 +61,17 @@ export function PersianCalendar({ value, onChange }: { value: Date; onChange: (d
         onChange(withTime(day, value))
     }
 
-    const quick = [
-        { label: "امروز", date: today },
-        { label: "دیروز", date: addDays(today, -1) },
-        { label: "پریروز", date: addDays(today, -2) },
-    ]
+    const quick = allowFuture
+        ? [
+              { label: "۳ ماه بعد", date: monthsLater(today, 3) },
+              { label: "۶ ماه بعد", date: monthsLater(today, 6) },
+              { label: "یک سال بعد", date: monthsLater(today, 12) },
+          ]
+        : [
+              { label: "امروز", date: today },
+              { label: "دیروز", date: addDays(today, -1) },
+              { label: "پریروز", date: addDays(today, -2) },
+          ]
 
     return (
         <div className="animate-fade-in rounded-xl bg-card p-3">
@@ -78,7 +98,13 @@ export function PersianCalendar({ value, onChange }: { value: Date; onChange: (d
             </div>
 
             <div className="flex items-center justify-between">
-                <button type="button" onClick={() => go(-1)} aria-label="ماه قبل" className="press grid size-9 place-items-center text-primary">
+                <button
+                    type="button"
+                    onClick={() => go(-1)}
+                    disabled={allowFuture && isCurrentMonth}
+                    aria-label="ماه قبل"
+                    className="press grid size-9 place-items-center text-primary transition-opacity disabled:opacity-25"
+                >
                     <ChevronRight className="size-5" />
                 </button>
                 <span key={month.toDateString()} className="animate-fade-in text-[15px] font-semibold">
@@ -87,7 +113,7 @@ export function PersianCalendar({ value, onChange }: { value: Date; onChange: (d
                 <button
                     type="button"
                     onClick={() => go(1)}
-                    disabled={isCurrentMonth}
+                    disabled={!allowFuture && isCurrentMonth}
                     aria-label="ماه بعد"
                     className="press grid size-9 place-items-center text-primary transition-opacity disabled:opacity-25"
                 >
@@ -103,14 +129,14 @@ export function PersianCalendar({ value, onChange }: { value: Date; onChange: (d
                 ))}
                 {cells.map((day, i) => {
                     if (!day) return <span key={`empty-${i}`} />
-                    const future = day > today && !isSameDay(day, today)
-                    const selected = isSameDay(day, value)
                     const isToday = isSameDay(day, today)
+                    const disabled = !isToday && (allowFuture ? day < today : day > today)
+                    const selected = isSameDay(day, value)
                     return (
                         <button
                             key={day.toDateString()}
                             type="button"
-                            disabled={future}
+                            disabled={disabled}
                             onClick={() => pick(day)}
                             className="grid h-9 place-items-center disabled:opacity-25"
                         >

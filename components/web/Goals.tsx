@@ -294,6 +294,7 @@ function GoalForm({ goal, onDone }: { goal?: Goal; onDone: () => void }) {
                         {calendarOpen && (
                             <div className="border-t border-separator">
                                 <PersianCalendar
+                                    future
                                     value={deadline ? fromDateKey(deadline) : new Date()}
                                     onChange={(d) => {
                                         setDeadline(toDateKey(d))
