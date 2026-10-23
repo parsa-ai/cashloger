@@ -1,7 +1,7 @@
 "use client"
 
 import { Cell, Pie, PieChart } from "recharts"
-import { ChevronDown } from "lucide-react"
+import { ChevronLeft } from "lucide-react"
 import { surprised } from "blobatar/expression"
 
 import { ChartContainer } from "@/components/ui/chart"
@@ -34,7 +34,6 @@ export function buildChartItems(entries: LogEntry[], categories: Category[], isC
     return items.sort((a, b) => b.visitors - a.visitors)
 }
 
-// با onOpen، کل دونات دکمه می‌شود و یک فلش کوچک زیر مجموع نشان می‌دهد که قابل لمس است
 export function SpendingChart({ items, isCosts, onOpen }: { items: ChartItem[]; isCosts: boolean; onOpen?: () => void }) {
     const total = items.reduce((sum, item) => sum + item.visitors, 0)
     const active = useViewActive()
@@ -50,20 +49,21 @@ export function SpendingChart({ items, isCosts, onOpen }: { items: ChartItem[]; 
     }
 
     const Wrapper = onOpen ? "button" : "div"
+    const preview = items.slice(0, 3)
 
     return (
-        <div className="animate-fade-in">
-            <Wrapper
-                {...(onOpen && {
-                    type: "button" as const,
-                    onClick: onOpen,
-                    "aria-label": `جزئیات ${isCosts ? "هزینه‌ها" : "درآمدها"} به تفکیک دسته`,
-                })}
-                className={cn(
-                    "relative mx-auto block aspect-square w-full max-w-44 py-4",
-                    onOpen && "press-scale rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                )}
-            >
+        <Wrapper
+            {...(onOpen && {
+                type: "button" as const,
+                onClick: onOpen,
+                "aria-label": `جزئیات ${isCosts ? "هزینه‌ها" : "درآمدها"} به تفکیک دسته`,
+            })}
+            className={cn(
+                "animate-fade-in relative block w-full rounded-xl py-5",
+                onOpen && "press-row bg-card outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            )}
+        >
+            <div className="relative mx-auto aspect-square w-full max-w-44">
                 {active && (
                 <ChartContainer config={{}} className="aspect-square size-full">
                     <PieChart>
@@ -89,18 +89,29 @@ export function SpendingChart({ items, isCosts, onOpen }: { items: ChartItem[]; 
                 </ChartContainer>
                 )}
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-[12px] text-muted-foreground">مجموع {isCosts ? "هزینه" : "درآمد"}</span>
                     <span className="text-lg font-bold">
                         <AnimatedNumber value={total} />
                     </span>
-                    {onOpen && (
-                        <span aria-hidden className="mt-1 grid size-6 place-items-center rounded-full bg-tint text-primary">
-                            <ChevronDown className="size-4" strokeWidth={2.4} />
-                        </span>
-                    )}
                 </div>
-            </Wrapper>
-        </div>
+            </div>
+            {/* نشانهٔ بدون متن: دسته‌های اصلی روی هم + فلش «بیشتر» مثل ردیف‌های لیست */}
+            {onOpen && (
+                <span aria-hidden className="absolute end-3 bottom-3 flex items-center gap-1 rounded-full bg-fill py-1 ps-1 pe-1.5">
+                    <span className="flex -space-x-1.5">
+                        {preview.map((item) => (
+                            <CategoryAvatar
+                                key={item.id}
+                                label={item.category}
+                                color={item.fill}
+                                size={22}
+                                className="rounded-full ring-2 ring-fill"
+                            />
+                        ))}
+                    </span>
+                    <ChevronLeft className="size-4 text-muted-foreground" strokeWidth={2.4} />
+                </span>
+            )}
+        </Wrapper>
     )
 }
 
