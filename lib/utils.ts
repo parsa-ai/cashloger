@@ -70,8 +70,12 @@ export function formatMoney(value: number) {
   return Math.round(value).toLocaleString("fa-IR")
 }
 
-// مبلغ به زبان خودمانی: ۱۲۵۰۰۰۰ ← «۱ میلیون و ۲۵۰ هزار»
-export function formatAmountWords(value: number) {
+// واحد اصلی همهٔ مبالغ (ورودی، نمایش و ذخیره)
+export const MONEY_UNIT = "هزار تومان"
+
+// مبلغ (به هزار تومان) به زبان خودمانی: ۱۲۵۰ ← «۱ میلیون و ۲۵۰ هزار تومان»
+export function formatAmountWords(thousands: number) {
+  const value = thousands * 1000
   if (value < 1000) return ""
   const units: [number, string][] = [[1e12, "هزار میلیارد"], [1e9, "میلیارد"], [1e6, "میلیون"], [1e3, "هزار"]]
   const parts: string[] = []
@@ -84,7 +88,7 @@ export function formatAmountWords(value: number) {
     }
   }
   if (rest > 0) parts.push(rest.toLocaleString("fa-IR"))
-  return parts.join(" و ")
+  return `${parts.join(" و ")} تومان`
 }
 
 export function formatMonthTitle(date: Date) {

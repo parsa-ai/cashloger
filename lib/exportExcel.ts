@@ -44,7 +44,7 @@ export async function exportToExcel(entries: LogEntry[], categories: Category[],
         { header: "تاریخ (میلادی)", key: "date", width: 14, style: { numFmt: "yyyy-mm-dd" } },
         { header: "نوع", key: "kind", width: 10 },
         { header: "دسته‌بندی", key: "category", width: 18 },
-        { header: "مبلغ (تومان)", key: "amount", width: 16, style: { numFmt: MONEY_FORMAT } },
+        { header: "مبلغ (هزار تومان)", key: "amount", width: 16, style: { numFmt: MONEY_FORMAT } },
         { header: "توضیحات", key: "description", width: 40 },
     ]
     for (const entry of sorted) {
@@ -103,7 +103,7 @@ export async function exportToExcel(entries: LogEntry[], categories: Category[],
         { header: "دسته‌بندی", key: "label", width: 20 },
         { header: "نوع", key: "kind", width: 10 },
         { header: "تعداد", key: "count", width: 10 },
-        { header: "مجموع (تومان)", key: "total", width: 16, style: { numFmt: MONEY_FORMAT } },
+        { header: "مجموع (هزار تومان)", key: "total", width: 16, style: { numFmt: MONEY_FORMAT } },
     ]
     const rows = [...categories, null].map((category) => {
         const matching = entries.filter((e) =>

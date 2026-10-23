@@ -12,7 +12,7 @@ import { MoneyInput } from "@/components/web/MoneyInput"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { suggestColor } from "@/lib/palette"
 import { Category, LogKind } from "@/lib/types"
-import { formatAmountWords, formatMoney, haptic } from "@/lib/utils"
+import { formatAmountWords, formatMoney, haptic, MONEY_UNIT } from "@/lib/utils"
 import { useLogStore } from "@/store/useChartStore"
 import { toast } from "@/store/useToastStore"
 
@@ -111,7 +111,7 @@ function CategoryForm({ kind, category, onDone }: CategoryFormProps) {
                             title="بودجهٔ ماهانه"
                             footer={
                                 budget
-                                    ? `${formatAmountWords(budget) || formatMoney(budget)} تومان در ماه`
+                                    ? `${formatAmountWords(budget)} در ماه`
                                     : "اختیاری؛ اگر بگذاری، در خانه می‌بینی چقدر از آن خرج شده."
                             }
                         >
@@ -193,7 +193,7 @@ export function CategoryManager() {
                                 onClick={() => openForm(category)}
                                 leading={<CategoryAvatar label={category.label} color={category.color} size={36} />}
                                 title={category.label}
-                                subtitle={category.budget ? `بودجه: ${formatMoney(category.budget)} تومان` : undefined}
+                                subtitle={category.budget ? `بودجه: ${formatMoney(category.budget)} ${MONEY_UNIT}` : undefined}
                                 trailing={
                                     count > 0 && (
                                         <span className="num text-[13px] text-muted-foreground">{count.toLocaleString("fa-IR")}</span>

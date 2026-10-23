@@ -12,7 +12,7 @@ import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { WheelPicker } from "@/components/web/WheelPicker"
 import { navigate } from "@/lib/nav"
 import { LogEntry, LogKind } from "@/lib/types"
-import { addDays, cn, defaultEntryDate, haptic, isSameDay } from "@/lib/utils"
+import { addDays, cn, defaultEntryDate, haptic, isSameDay, MONEY_UNIT } from "@/lib/utils"
 import { useCategoriesByUsage } from "@/store/selectors"
 import { useLogStore } from "@/store/useChartStore"
 import { toast } from "@/store/useToastStore"
@@ -222,7 +222,7 @@ function TransactionForm() {
                     >
                         {amount.toLocaleString("fa-IR")}
                     </span>
-                    <span className="text-[15px] font-medium text-muted-foreground">تومان</span>
+                    <span className="text-[15px] font-medium text-muted-foreground">{MONEY_UNIT}</span>
                 </p>
 
                 {/* ۲) جزئیات در یک کارت: دسته (چرخ)، بعد تاریخ و توضیح */}

@@ -12,7 +12,7 @@ import { MoneyInput } from "@/components/web/MoneyInput"
 import { PersianCalendar } from "@/components/web/PersianCalendar"
 import { suggestColor } from "@/lib/palette"
 import { Goal } from "@/lib/types"
-import { cn, formatAmountWords, formatMoney, haptic } from "@/lib/utils"
+import { cn, formatAmountWords, formatMoney, haptic, MONEY_UNIT } from "@/lib/utils"
 import { useLogStore } from "@/store/useChartStore"
 import { toast } from "@/store/useToastStore"
 
@@ -102,7 +102,7 @@ function GoalDetail({ goal, onEdit }: { goal: Goal; onEdit: () => void }) {
                         <div className="min-w-0 flex-1">
                             <p className="truncate text-[28px] leading-tight font-bold">
                                 <span className="num">{formatMoney(goal.saved)}</span>
-                                <span className="ms-1.5 text-[15px] font-medium text-muted-foreground">تومان</span>
+                                <span className="ms-1.5 text-[15px] font-medium text-muted-foreground">{MONEY_UNIT}</span>
                             </p>
                             <p className="text-[13px] text-muted-foreground">
                                 از <span className="num">{formatMoney(goal.target)}</span>
@@ -122,7 +122,7 @@ function GoalDetail({ goal, onEdit }: { goal: Goal; onEdit: () => void }) {
                             <span className="text-success">به هدف رسیدی</span>
                         ) : (
                             <>
-                                <span className="num">{formatMoney(remaining)}</span> تومان مانده
+                                <span className="num">{formatMoney(remaining)}</span> {MONEY_UNIT} مانده
                                 {perMonth !== null && (
                                     <>
                                         {" · "}ماهی <span className="num">{formatMoney(perMonth)}</span> تا{" "}
@@ -220,7 +220,7 @@ function GoalForm({ goal, onDone }: { goal?: Goal; onDone: () => void }) {
                         </div>
                     </Group>
 
-                    <Group title="مبلغ هدف" footer={target ? `${formatAmountWords(target) || formatMoney(target)} تومان` : undefined}>
+                    <Group title="مبلغ هدف" footer={target ? formatAmountWords(target) : undefined}>
                         <MoneyInput value={target} onChange={setTarget} placeholder="۰" label="مبلغ هدف" />
                     </Group>
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { cn, formatMoney } from "@/lib/utils"
+import { cn, formatMoney, MONEY_UNIT } from "@/lib/utils"
 
 // ارقام فارسی/عربی را هم می‌پذیرد و فقط عدد نگه می‌دارد
 function parseAmount(value: string) {
@@ -13,7 +13,7 @@ function parseAmount(value: string) {
     return digits ? Number(digits) : null
 }
 
-// ردیف ورود مبلغ داخل Group: عدد با جداکنندهٔ هزارگان و «تومان» در انتها
+// ردیف ورود مبلغ داخل Group: عدد با جداکنندهٔ هزارگان و «هزار تومان» در انتها
 export function MoneyInput({
     value,
     onChange,
@@ -41,7 +41,7 @@ export function MoneyInput({
                 autoFocus={autoFocus}
                 className="num h-[52px] min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-muted-foreground/70"
             />
-            <span className="text-[15px] text-muted-foreground">تومان</span>
+            <span className="text-[15px] shrink-0 text-muted-foreground">{MONEY_UNIT}</span>
         </div>
     )
 }

@@ -11,7 +11,7 @@ import { Goals } from "@/components/web/Goals"
 import { Group, Row } from "@/components/web/Group"
 import { SegmentedControl } from "@/components/web/SegmentedControl"
 import { Category, LogEntry, LogKind } from "@/lib/types"
-import { cn, formatMoney, haptic } from "@/lib/utils"
+import { cn, formatMoney, haptic, MONEY_UNIT } from "@/lib/utils"
 import { useCategoriesByUsage, useMonthEntries } from "@/store/selectors"
 import { useLogStore } from "@/store/useChartStore"
 import { useUiStore } from "@/store/useUiStore"
@@ -60,7 +60,7 @@ function SummaryCard({ income, costs }: { income: number; costs: number }) {
             <div className="px-4 pt-4 pb-3">
                 <p className={cn("mt-0.5 text-[34px] leading-tight font-bold", balance < 0 ? "text-destructive" : "text-success")}>
                     <AnimatedNumber value={balance} />
-                    <span className="ms-1.5 text-[15px] font-medium text-muted-foreground">تومان</span>
+                    <span className="ms-1.5 text-[15px] font-medium text-muted-foreground">{MONEY_UNIT}</span>
                 </p>
             </div>
             <div className="grid grid-cols-2 border-t border-separator [&>:first-child]:border-e [&>:first-child]:border-separator">
