@@ -269,35 +269,15 @@ export function UserView() {
         <p className="text-[15px] text-muted-foreground" dir="ltr">{email}</p>
       </section>
 
-      <Group
-        title="حساب"
-      >
-        <Row
-          onClick={() => setUsernameOpen(true)}
-          leading={<IconTile color="oklch(0.62 0.17 255)"><AtSign /></IconTile>}
-          title="نام کاربری"
-          trailing={
-            username ? (
-              <span className="text-[15px] text-muted-foreground" dir="ltr">@{username}</span>
-            ) : (
-              <span className="text-[15px] text-primary">انتخاب کن</span>
-            )
-          }
-          chevron
-        />
-        <Row
-          onClick={() => setPasswordOpen(true)}
-          leading={<IconTile color="oklch(0.55 0.02 260)"><KeyRound /></IconTile>}
-          title="تغییر رمز عبور"
-          chevron
-        />
-      </Group>
 
-      <ReminderSettings />
 
       <ThemeSettings />
-
+      <div className="space-y-3">
+        <ReminderSettings />
       <MoneyUnitSettings />
+      </div>
+
+
 
       <Group
         title="داده‌ها"
@@ -332,6 +312,31 @@ export function UserView() {
               : formatSyncTime(lastSyncedAt)
           }
           trailing={<RefreshCw className={`size-[18px] text-muted-foreground ${isSyncing ? 'animate-spin' : ''}`} />}
+        />
+      </Group>
+
+
+      <Group
+        title="حساب"
+      >
+        <Row
+          onClick={() => setUsernameOpen(true)}
+          leading={<IconTile color="oklch(0.62 0.17 255)"><AtSign /></IconTile>}
+          title="نام کاربری"
+          trailing={
+            username ? (
+              <span className="text-[15px] text-muted-foreground" dir="ltr">@{username}</span>
+            ) : (
+              <span className="text-[15px] text-primary">انتخاب کن</span>
+            )
+          }
+          chevron
+        />
+        <Row
+          onClick={() => setPasswordOpen(true)}
+          leading={<IconTile color="oklch(0.55 0.02 260)"><KeyRound /></IconTile>}
+          title="تغییر رمز عبور"
+          chevron
         />
       </Group>
 

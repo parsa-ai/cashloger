@@ -9,19 +9,16 @@ import { formatMoney, getMoneyUnit, MONEY_UNITS } from "@/lib/money"
 import { cn, haptic } from "@/lib/utils"
 import { useMoneyUnitStore } from "@/store/useMoneyUnitStore"
 
-// مبلغ نمونه برای نشان دادن شکل هر واحد
-const SAMPLE = 1_250_000
+const SAMPLE = 125_000
 
-// انتخاب واحد پول برای نمایش و ورود مبالغ (مبالغ همیشه به تومان ذخیره می‌شوند).
-// منوی کشویی کوچک کنار ردیف، مثل منوهای iOS
 export function MoneyUnitSettings() {
     const unit = useMoneyUnitStore((s) => s.unit)
     const setUnit = useMoneyUnitStore((s) => s.setUnit)
     const [open, setOpen] = useState(false)
 
     return (
-        <Group footer="فقط نحوهٔ نمایش و ورود مبلغ عوض می‌شود؛ مبالغ ثبت‌شده تغییری نمی‌کنند.">
-            <Popover.Root open={open} onOpenChange={setOpen}>
+        <Group>
+            <Popover.Root open={open} onOpenChange={setOpen} >
                 <Row
                     onClick={() => {
                         haptic()

@@ -62,7 +62,7 @@ export function SpendingChart({ items, isCosts, onOpen }: { items: ChartItem[]; 
             })}
             className={cn(
                 "animate-fade-in relative block w-full rounded-xl py-5",
-                onOpen && "press-row bg-card outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                onOpen && "press-row outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             )}
         >
             <div className="relative mx-auto aspect-square w-full max-w-44">

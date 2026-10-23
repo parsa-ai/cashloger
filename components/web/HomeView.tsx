@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { ArrowDown, ArrowUp, Plus } from "lucide-react"
+import { ArrowDown, ArrowUp } from "lucide-react"
 
 import { Dialog, DialogBody, DialogContent, DialogNav } from "@/components/ui/dialog"
 import { AnimatedNumber } from "@/components/web/AnimatedNumber"
@@ -46,9 +46,7 @@ function Stat({ label, value, kind }: { label: string; value: number; kind: LogK
                     <AnimatedNumber value={value} />
                 </p>
             </div>
-            {/* <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-tint text-primary">
-                <Plus className="size-4" strokeWidth={2.4} />
-            </span> */}
+           
         </button>
     )
 }
@@ -121,9 +119,6 @@ function Budgets({ entries, categories }: { entries: LogEntry[]; categories: Cat
     }, [entries, categories])
 
     if (rows.length === 0) return null
-
-    const totalBudget = rows.reduce((sum, r) => sum + r.budget, 0)
-    const totalSpent = rows.reduce((sum, r) => sum + r.spent, 0)
 
     return (
         <Group>
@@ -238,7 +233,7 @@ export function HomeView() {
 
             <Dialog open={breakdownOpen && items.length > 0} onOpenChange={setBreakdownOpen}>
                 <DialogContent>
-                    <DialogNav title={kind === "cost" ? "هزینه‌ها به تفکیک دسته" : "درآمدها به تفکیک دسته"} />
+                    <DialogNav title={kind === "cost" ? "هزینه‌ها" : "درآمدها"} />
                     <DialogBody>
                         <Group>
                             <CategoryBreakdown items={items} />
