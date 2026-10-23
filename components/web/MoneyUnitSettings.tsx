@@ -1,48 +1,93 @@
 "use client"
 
-import { ChevronsUpDown, Coins } from "lucide-react"
+import { useState } from "react"
+import { Check, ChevronsUpDown, Coins } from "lucide-react"
+import { Popover } from "radix-ui"
 
 import { Group, IconTile, Row } from "@/components/web/Group"
-import { getMoneyUnit, MONEY_UNITS, MoneyUnitId } from "@/lib/money"
-import { haptic } from "@/lib/utils"
+import { formatMoney, getMoneyUnit, MONEY_UNITS } from "@/lib/money"
+import { cn, haptic } from "@/lib/utils"
 import { useMoneyUnitStore } from "@/store/useMoneyUnitStore"
 
+// مبلغ نمونه برای نشان دادن شکل هر واحد
+const SAMPLE = 1_250_000
+
 // انتخاب واحد پول برای نمایش و ورود مبالغ (مبالغ همیشه به تومان ذخیره می‌شوند).
-// یک select بومی و نامرئی روی ردیف است تا روی گوشی انتخابگر خود سیستم باز شود
+// منوی کشویی کوچک کنار ردیف، مثل منوهای iOS
 export function MoneyUnitSettings() {
     const unit = useMoneyUnitStore((s) => s.unit)
     const setUnit = useMoneyUnitStore((s) => s.setUnit)
+    const [open, setOpen] = useState(false)
 
     return (
         <Group footer="فقط نحوهٔ نمایش و ورود مبلغ عوض می‌شود؛ مبالغ ثبت‌شده تغییری نمی‌کنند.">
-            <Row
-                className="press-row relative"
-                leading={<IconTile color="oklch(0.7 0.16 75)"><Coins /></IconTile>}
-                title="واحد پول"
-                trailing={
-                    <>
-                        <span className="flex items-center gap-1 text-[15px] text-muted-foreground">
-                            {getMoneyUnit(unit).label}
-                            <ChevronsUpDown className="size-4 text-muted-foreground/60" />
-                        </span>
-                        <select
-                            value={unit}
-                            onChange={(e) => {
-                                haptic()
-                                setUnit(e.target.value as MoneyUnitId)
-                            }}
-                            aria-label="واحد پول"
-                            className="absolute inset-0 cursor-pointer opacity-0"
-                        >
-                            {MONEY_UNITS.map((u) => (
-                                <option key={u.id} value={u.id}>
-                                    {u.label}
-                                </option>
-                            ))}
-                        </select>
-                    </>
-                }
-            />
+            <Popover.Root open={open} onOpenChange={setOpen}>
+                <Row
+                    onClick={() => {
+                        haptic()
+                        setOpen(true)
+                    }}
+                    leading={<IconTile color="oklch(0.7 0.16 75)"><Coins /></IconTile>}
+                    title="واحد پول"
+                    trailing={
+                        <Popover.Anchor asChild>
+                            <span
+                                className={cn(
+                                    "flex items-center gap-1 text-[15px] transition-colors duration-200",
+                                    open ? "text-primary" : "text-muted-foreground"
+                                )}
+                            >
+                                {getMoneyUnit(unit).label}
+                                <ChevronsUpDown className="size-4 opacity-60" />
+                            </span>
+                        </Popover.Anchor>
+                    }
+                />
+                <Popover.Portal>
+                    <Popover.Content
+                        side="bottom"
+                        align="end"
+                        sideOffset={10}
+                        collisionPadding={16}
+                        dir="rtl"
+                        role="menu"
+                        aria-label="واحد پول"
+                        className="z-[60] w-60 origin-(--radix-popover-content-transform-origin) overflow-hidden rounded-2xl bg-card shadow-float outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+                    >
+                        {MONEY_UNITS.map((u) => {
+                            const selected = u.id === unit
+                            return (
+                                <button
+                                    key={u.id}
+                                    type="button"
+                                    role="menuitemradio"
+                                    aria-checked={selected}
+                                    onClick={() => {
+                                        if (!selected) {
+                                            haptic()
+                                            setUnit(u.id)
+                                        }
+                                        setOpen(false)
+                                    }}
+                                    className="press-row flex w-full items-center gap-3 border-b border-separator px-4 py-2.5 text-right last:border-b-0"
+                                >
+                                    <Check
+                                        aria-hidden
+                                        strokeWidth={2.6}
+                                        className={cn("size-4 shrink-0 text-primary", !selected && "invisible")}
+                                    />
+                                    <span className="min-w-0 flex-1">
+                                        <span className={cn("block text-[15px]", selected && "font-semibold")}>{u.label}</span>
+                                        <span className="num block truncate text-[12px] text-muted-foreground">
+                                            {formatMoney(SAMPLE, u)} {u.label}
+                                        </span>
+                                    </span>
+                                </button>
+                            )
+                        })}
+                    </Popover.Content>
+                </Popover.Portal>
+            </Popover.Root>
         </Group>
     )
 }
