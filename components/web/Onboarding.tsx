@@ -6,6 +6,7 @@ import { happy } from "blobatar/expression"
 
 import { Button } from "@/components/ui/button"
 import { UserBlob } from "@/components/web/Avatars"
+import { IntroSlides } from "@/components/web/IntroSlides"
 import { ReminderPicker, applyReminders, pushStatusHint } from "@/components/web/Reminders"
 import { useBlobName } from "@/components/web/ProfileProvider"
 import { BASE_CATEGORIES, BaseCategory, MIN_ONBOARDING_CATEGORIES } from "@/lib/categories"
@@ -19,7 +20,7 @@ import { toast } from "@/store/useToastStore"
 
 const keyOf = (c: BaseCategory) => `${c.kind}:${c.label}`
 
-// کاربر تازه‌وارد (بدون هیچ دسته و تراکنشی) اول دسته‌هایش را انتخاب می‌کند، بعد ساعت یادآوری را
+// کاربر تازه‌وارد (بدون هیچ دسته و تراکنشی) اول چند اسلاید معرفی می‌بیند، بعد دسته‌هایش را انتخاب می‌کند، بعد ساعت یادآوری را
 export function Onboarding() {
     const needed = useLogStore(
         (s) =>
@@ -30,11 +31,12 @@ export function Onboarding() {
             s.entries.length === 0 &&
             s.queue.length === 0
     )
-    const [step, setStep] = useState<"categories" | "reminders" | "done">("categories")
+    const [step, setStep] = useState<"intro" | "categories" | "reminders" | "done">("intro")
 
     // بعد از ساختن دسته‌ها «needed» دیگر برقرار نیست؛ مرحلهٔ یادآوری مستقل از آن می‌ماند
     if (step === "reminders") return <ReminderStep onDone={() => setStep("done")} />
     if (!needed || step === "done") return null
+    if (step === "intro") return <IntroSlides doneLabel="بزن بریم" onDone={() => setStep("categories")} />
     return <OnboardingScreen onDone={() => setStep("reminders")} />
 }
 

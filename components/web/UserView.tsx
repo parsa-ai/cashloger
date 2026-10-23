@@ -2,7 +2,7 @@
 
 import { SubmitEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AtSign, Check, CloudCheck, CloudOff, FileSpreadsheet, KeyRound, Loader2, RefreshCw, Tags, X } from 'lucide-react'
+import { AtSign, Check, CloudCheck, CloudOff, FileSpreadsheet, KeyRound, Loader2, RefreshCw, Sparkles, Tags, X } from 'lucide-react'
 import { idle, sleepy } from 'blobatar/expression'
 
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import { Dialog, DialogBody, DialogContent, DialogNav } from '@/components/ui/di
 import { PasswordField } from '@/components/ui/password-field'
 import { UserBlob } from '@/components/web/Avatars'
 import { ExportSheet } from '@/components/web/ExportSheet'
+import { IntroSlides } from '@/components/web/IntroSlides'
 import { MoneyUnitSettings } from '@/components/web/MoneyUnitSettings'
 import { ReminderSettings } from '@/components/web/Reminders'
 import { Group, IconTile, Row } from '@/components/web/Group'
@@ -228,6 +229,7 @@ export function UserView() {
   const [passwordOpen, setPasswordOpen] = useState(false)
   const [usernameOpen, setUsernameOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [introOpen, setIntroOpen] = useState(false)
   const [confirmSignOut, setConfirmSignOut] = useState(false)
 
   const isOnline = useLogStore((s) => s.isOnline)
@@ -313,6 +315,12 @@ export function UserView() {
           }
           trailing={<RefreshCw className={`size-[18px] text-muted-foreground ${isSyncing ? 'animate-spin' : ''}`} />}
         />
+        <Row
+          onClick={() => setIntroOpen(true)}
+          leading={<IconTile color="oklch(0.7 0.16 60)"><Sparkles /></IconTile>}
+          title="راهنمای برنامه"
+          chevron
+        />
       </Group>
 
 
@@ -357,6 +365,7 @@ export function UserView() {
       <UsernameSheet open={usernameOpen} onOpenChange={setUsernameOpen} />
       <PasswordSheet open={passwordOpen} onOpenChange={setPasswordOpen} />
       <ExportSheet open={exportOpen} onOpenChange={setExportOpen} />
+      {introOpen && <IntroSlides doneLabel="فهمیدم" onDone={() => setIntroOpen(false)} />}
     </div>
   )
 }
