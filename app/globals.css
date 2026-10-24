@@ -258,6 +258,20 @@
     animation-delay: 0ms !important;
     transition-duration: 1ms !important;
   }
+  .blob-twinkle {
+    animation: none !important;
+  }
+}
+
+/* چشمک ستاره‌های کنار گل آواتار */
+.blob-twinkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: blob-twinkle 2600ms ease-in-out infinite;
+}
+@keyframes blob-twinkle {
+  0%, 100% { opacity: 0.35; transform: scale(0.7); }
+  50% { opacity: 1; transform: scale(1); }
 }
 
 /* صفحهٔ شروع (AppSplash): تا بالا آمدن برنامه نمایش داده می‌شود */
