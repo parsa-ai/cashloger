@@ -1,7 +1,7 @@
 // سرویس‌ورکر کش لاگر: صفحات و فایل‌های برنامه را کش می‌کند تا بدون اینترنت هم باز شود.
 // داده‌ها جدا از این فایل، در حافظهٔ دستگاه و صف همگام‌سازی نگه داشته می‌شوند.
 
-const VERSION = "v5";
+const VERSION = "v6";
 // اگر سرور تا این مدت جواب نداد (اینترنت ضعیف یا قطع ولی وصل‌نما)، نسخهٔ ذخیره‌شده نمایش داده می‌شود
 const NAV_TIMEOUT = 3000;
 const SHELL_CACHE = `shell-${VERSION}`;
@@ -14,6 +14,8 @@ const SHELL_FILES = [
     "/favicon.ico",
     "/web-app-manifest-192x192.png",
     "/web-app-manifest-512x512.png",
+    "/favicon.svg",
+    "/badge-96x96.png",
 ];
 
 self.addEventListener("install", (event) => {
@@ -176,7 +178,7 @@ self.addEventListener("push", (event) => {
         self.registration.showNotification(data.title || "کش لاگر", {
             body: data.body || "تراکنش‌های امروز رو ثبت کردی؟",
             icon: "/web-app-manifest-192x192.png",
-            badge: "/favicon-96x96.png",
+            badge: "/badge-96x96.png",
             // یادآوری تازه جای قبلی را می‌گیرد، روی هم انباشته نمی‌شوند
             tag: "daily-reminder",
             lang: "fa",

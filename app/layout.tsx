@@ -29,9 +29,17 @@ const vazirmatn = Vazirmatn({
 export const metadata: Metadata = {
   title: "کش لاگر",
   description: "ثبت درآمد و هزینه‌های روزانه",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon-96x96.png", sizes: "96x96", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
-    title: "کش لاگر",
+    // نام زیر آیکون روی صفحهٔ اصلی آیفون
+    title: "Cash Logger",
     statusBarStyle: "black-translucent"
   },
 };
