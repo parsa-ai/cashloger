@@ -3,7 +3,8 @@
 
 const VERSION = "v6";
 // اگر سرور تا این مدت جواب نداد (اینترنت ضعیف یا قطع ولی وصل‌نما)، نسخهٔ ذخیره‌شده نمایش داده می‌شود
-const NAV_TIMEOUT = 3000;
+// (کوتاه، چون تا آن موقع صفحه سفید/سیاه است و نسخهٔ ذخیره‌شده هم همان اسکلت‌ها را دارد؛ داده‌ها سمت کاربر بار می‌شوند)
+const NAV_TIMEOUT = 1500;
 const SHELL_CACHE = `shell-${VERSION}`;
 const STATIC_CACHE = `static-${VERSION}`;
 const PAGES_CACHE = `pages-${VERSION}`;
@@ -122,11 +123,14 @@ async function handleNavigation(event) {
     const cached = (await pages.match(url.pathname)) || (await pages.match("/"));
     if (!cached) {
         try {
-            return await network;
+            return await Promise.race([network, timeout(NAV_TIMEOUT * 4)]);
         } catch {
             return offlineFallback();
         }
     }
+
+    // دستگاه می‌داند آفلاین است؛ منتظر شبکه نمی‌مانیم
+    if (!self.navigator.onLine) return cached;
 
     try {
         const response = await Promise.race([network, timeout(NAV_TIMEOUT)]);
