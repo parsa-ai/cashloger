@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { ChartPie, ChevronLeft, ChevronRight, Plus, ReceiptText } from "lucide-react"
 import { happy, sleepy } from "blobatar/expression"
 
@@ -132,9 +133,12 @@ export function IntroSlides({ onDone, doneLabel }: { onDone: () => void; doneLab
     }
 
     const goTo = (i: number) => {
-        const slide = trackRef.current?.children[i] as HTMLElement | undefined
+        const el = trackRef.current
+        if (!el) return
         const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        slide?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "nearest", inline: "start" })
+        // فقط خود ریل جابه‌جا شود، نه صفحهٔ پشت (scrollIntoView صفحه را هم تکان می‌داد)
+        const rtl = getComputedStyle(el).direction === "rtl"
+        el.scrollTo({ left: (rtl ? -1 : 1) * i * el.clientWidth, behavior: reduce ? "auto" : "smooth" })
     }
 
     const next = () => {
@@ -143,7 +147,8 @@ export function IntroSlides({ onDone, doneLabel }: { onDone: () => void; doneLab
         else goTo(index + 1)
     }
 
-    return (
+    // روی body رندر می‌شود؛ وگرنه انیمیشن transform نمای صفحه، fixed را به همان نما محدود می‌کرد
+    return createPortal(
         <div className="fixed inset-0 z-[55] flex animate-page-in touch-pan-x flex-col overflow-hidden overscroll-none bg-background">
             <div className="flex justify-end px-2 pt-[calc(env(safe-area-inset-top)+8px)]">
                 <Button
@@ -200,6 +205,7 @@ export function IntroSlides({ onDone, doneLabel }: { onDone: () => void; doneLab
                     </Button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     )
 }
