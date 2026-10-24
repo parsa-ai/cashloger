@@ -47,7 +47,9 @@ export function ExportSheet({ open, onOpenChange: setOpen }: { open: boolean; on
             toast("فایل اکسل آماده شد", "success")
             setOpen(false)
         } catch (err) {
-            toast(err instanceof Error ? err.message : "خطا در ساخت فایل اکسل", "error")
+            // ابزار ساخت اکسل هنوز کش نشده (هیچ‌وقت آنلاین باز نشده)
+            if (!navigator.onLine) toast("برای اولین خروجی اکسل یک بار به اینترنت وصل شو", "error")
+            else toast(err instanceof Error ? err.message : "خطا در ساخت فایل اکسل", "error")
         } finally {
             setIsExporting(false)
         }

@@ -7,6 +7,18 @@ import { useMoneyUnitStore } from "@/store/useMoneyUnitStore"
 // صفحاتی که برای کار آفلاین از قبل کش می‌شوند
 const OFFLINE_PAGES = ["/", "/logs", "/user", "/categories", "/goals"]
 
+// فایل‌هایی که با import() تنبل بار می‌شوند در HTML صفحه نیستند و سرویس‌ورکر از قبل کششان نمی‌کند؛
+// یک بار (وقتی صفحه زیر کنترل سرویس‌ورکر است) دانلودشان می‌کنیم تا آفلاین هم در دسترس باشند (مثلاً خروجی اکسل)
+function warmLazyChunks() {
+  const load = () => {
+    const run = () => import("exceljs").catch(() => {})
+    if ("requestIdleCallback" in window) requestIdleCallback(run)
+    else setTimeout(run, 2000)
+  }
+  if (navigator.serviceWorker.controller) load()
+  else navigator.serviceWorker.addEventListener("controllerchange", load, { once: true })
+}
+
 function AppShell({ children, signedIn }: { children: React.ReactNode; signedIn: boolean }) {
   // واحد پول ذخیره‌شده بعد از mount خوانده می‌شود
   useEffect(() => {
@@ -26,6 +38,7 @@ function AppShell({ children, signedIn }: { children: React.ReactNode; signedIn:
         registration.active?.postMessage(
           signedIn ? { type: "WARM_PAGES", urls: OFFLINE_PAGES } : { type: "CLEAR_PAGES" }
         )
+        if (signedIn) warmLazyChunks()
       })
       .catch((error) => {
         console.error("Service Worker registration failed:", error)
