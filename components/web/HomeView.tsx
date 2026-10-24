@@ -65,12 +65,6 @@ function SummaryCard({ income, costs, saved }: { income: number; costs: number; 
                     <AnimatedNumber value={balance} />
                     <span className="ms-1.5 text-[15px] font-medium text-muted-foreground">{unit.label}</span>
                 </p>
-                {saved !== 0 && (
-                    <NavLink href="/goals" className="press mt-0.5 inline-block text-[13px] text-muted-foreground">
-                        <span className="num">{formatMoney(Math.abs(saved), unit)}</span>{" "}
-                        {saved > 0 ? "به پس‌انداز رفت" : "از پس‌انداز برگشت"}
-                    </NavLink>
-                )}
             </div>
             <div className="grid grid-cols-2 border-t border-separator [&>:first-child]:border-e [&>:first-child]:border-separator">
                 <Stat label="درآمد" value={income} kind="income" />

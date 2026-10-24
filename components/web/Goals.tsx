@@ -410,12 +410,7 @@ export function GoalsView() {
                         <span className="num">{formatMoney(total, unit)}</span>
                         <span className="ms-1.5 text-[15px] font-medium text-muted-foreground">{unit.label}</span>
                     </p>
-                    {month !== 0 && (
-                        <p className="mt-1 text-[13px] text-muted-foreground">
-                            این ماه <span className="num">{formatMoney(Math.abs(month), unit)}</span>{" "}
-                            {month > 0 ? "کنار گذاشتی" : "برداشتی"}
-                        </p>
-                    )}
+                    
                 </section>
             )}
 
