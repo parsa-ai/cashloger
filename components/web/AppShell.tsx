@@ -11,7 +11,7 @@ function AppShell({ children, signedIn }: { children: React.ReactNode; signedIn:
   // واحد پول ذخیره‌شده بعد از mount خوانده می‌شود
   useEffect(() => {
     useMoneyUnitStore.persist.rehydrate()
-    // برنامه بالا آمد؛ صفحهٔ شروع (AppSplash) کنار می‌رود
+    // برنامه بالا آمد؛ صفحهٔ شروع (AppSplash) اگر نمایش داده شده بود کنار می‌رود
     document.documentElement.setAttribute("data-ready", "")
   }, [])
 

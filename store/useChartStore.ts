@@ -117,6 +117,8 @@ export const useLogStore = create<LogStore>()((set, get) => {
     ...emptyState,
     // سرور همیشه «آنلاین» رندر می‌کند؛ وضعیت واقعی بعد از mount در DataLoader خوانده می‌شود تا hydration یکی باشد
     isOnline: true,
+    // تا init اجرا نشده اسکلت نشان داده شود (همان چیزی که سرور رندر می‌کند)، نه حالت خالی
+    isLoading: true,
 
     init: (userId) => {
       if (get().userId === userId) {

@@ -260,7 +260,7 @@
   }
 }
 
-/* صفحهٔ شروع (AppSplash): تا بالا آمدن برنامه نمایش داده می‌شود */
+/* صفحهٔ شروع (AppSplash): فقط وقتی برنامه گیر کرده (data-stuck) نمایش داده می‌شود */
 #app-splash {
   position: fixed;
   inset: 0;
@@ -271,6 +271,9 @@
   justify-content: center;
   gap: 28px;
   background-color: var(--background);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
   transition: opacity 200ms ease-out, visibility 0ms linear 200ms;
 }
 
@@ -278,17 +281,7 @@
   border-radius: 18px;
 }
 
-.app-splash-spinner {
-  width: 22px;
-  height: 22px;
-  border-radius: 9999px;
-  border: 2.5px solid var(--fill-strong);
-  border-top-color: var(--muted-foreground);
-  animation: app-splash-spin 800ms linear infinite;
-}
-
 #app-splash-retry {
-  display: none;
   font: inherit;
   font-weight: 600;
   border: 0;
@@ -298,28 +291,9 @@
   color: var(--primary-foreground);
 }
 
-[data-stuck] #app-splash-retry {
-  display: block;
-}
-
-[data-stuck] .app-splash-spinner {
-  display: none;
-}
-
-[data-ready] #app-splash {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-@keyframes app-splash-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .app-splash-spinner {
-    animation: none;
-  }
+[data-stuck]:not([data-ready]) #app-splash {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 200ms ease-out;
 }
