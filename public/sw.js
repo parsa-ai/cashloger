@@ -1,7 +1,9 @@
 // سرویس‌ورکر کش لاگر: صفحات و فایل‌های برنامه را کش می‌کند تا بدون اینترنت هم باز شود.
 // داده‌ها جدا از این فایل، در حافظهٔ دستگاه و صف همگام‌سازی نگه داشته می‌شوند.
 
-const VERSION = "v4";
+const VERSION = "v5";
+// اگر سرور تا این مدت جواب نداد (اینترنت ضعیف یا قطع ولی وصل‌نما)، نسخهٔ ذخیره‌شده نمایش داده می‌شود
+const NAV_TIMEOUT = 3000;
 const SHELL_CACHE = `shell-${VERSION}`;
 const STATIC_CACHE = `static-${VERSION}`;
 const PAGES_CACHE = `pages-${VERSION}`;
@@ -39,13 +41,36 @@ function isCacheablePage(response) {
     return response && response.ok && !response.redirected && response.type === "basic";
 }
 
+// همهٔ فایل‌های JS/CSS/فونتی که صفحه به آن‌ها اشاره می‌کند (در تگ‌ها و داده‌های RSC)
+function assetUrls(html) {
+    const urls = new Set();
+    for (const match of html.matchAll(/(?:\/_next\/)?static\/(?:chunks|css|media)\/[^"'\s\\)]+/g)) {
+        urls.add(match[0].startsWith("/") ? match[0] : `/_next/${match[0]}`);
+    }
+    return [...urls];
+}
+
+async function cacheAsset(cache, url) {
+    if (await cache.match(url)) return;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`asset ${url}: ${response.status}`);
+    await cache.put(url, response);
+}
+
+// صفحه فقط وقتی جایگزین نسخهٔ قبلی می‌شود که همهٔ فایل‌هایش هم کش شده باشند؛
+// وگرنه صفحه‌ای ذخیره می‌شود که آفلاین بدون JS می‌ماند (صفحهٔ سفید/سیاه)
+async function storePage(pathname, response) {
+    const html = await response.clone().text();
+    const staticCache = await caches.open(STATIC_CACHE);
+    await Promise.all(assetUrls(html).map((url) => cacheAsset(staticCache, url)));
+    const cache = await caches.open(PAGES_CACHE);
+    await cache.put(pathname, response);
+}
+
 async function cachePage(url) {
     try {
         const response = await fetch(url, { credentials: "same-origin" });
-        if (isCacheablePage(response)) {
-            const cache = await caches.open(PAGES_CACHE);
-            await cache.put(new URL(url, self.location.origin).pathname, response);
-        }
+        if (isCacheablePage(response)) await storePage(new URL(url, self.location.origin).pathname, response);
     } catch {
         // آفلاین هستیم؛ بعداً دوباره
     }
@@ -62,23 +87,51 @@ self.addEventListener("message", (event) => {
     }
 });
 
-async function handleNavigation(request) {
+async function offlineFallback() {
+    return (await caches.match("/offline.html")) || new Response("Offline", { status: 503 });
+}
+
+function timeout(ms) {
+    return new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), ms));
+}
+
+async function handleNavigation(event) {
+    const { request } = event;
     const url = new URL(request.url);
-    try {
-        const response = await fetch(request);
+
+    // بازگشت از ورود با گوگل و API باید حتماً به سرور برسند
+    if (url.pathname.startsWith("/auth/") || url.pathname.startsWith("/api/")) {
+        try {
+            return await fetch(request);
+        } catch {
+            return offlineFallback();
+        }
+    }
+
+    const network = fetch(request).then((response) => {
         if (isCacheablePage(response)) {
-            const cache = await caches.open(PAGES_CACHE);
-            cache.put(url.pathname, response.clone());
+            event.waitUntil(storePage(url.pathname, response.clone()).catch(() => {}));
         }
         return response;
+    });
+    network.catch(() => {});
+
+    const pages = await caches.open(PAGES_CACHE);
+    const cached = (await pages.match(url.pathname)) || (await pages.match("/"));
+    if (!cached) {
+        try {
+            return await network;
+        } catch {
+            return offlineFallback();
+        }
+    }
+
+    try {
+        const response = await Promise.race([network, timeout(NAV_TIMEOUT)]);
+        // خطای سرور (مثلاً وقتی سرور به Supabase نمی‌رسد) هم مثل آفلاین است
+        return response.status >= 500 ? cached : response;
     } catch {
-        const cache = await caches.open(PAGES_CACHE);
-        return (
-            (await cache.match(url.pathname)) ||
-            (await cache.match("/")) ||
-            (await caches.match("/offline.html")) ||
-            new Response("Offline", { status: 503 })
-        );
+        return cached;
     }
 }
 
@@ -102,7 +155,7 @@ self.addEventListener("fetch", (event) => {
     if (url.origin !== self.location.origin) return;
 
     if (request.mode === "navigate") {
-        event.respondWith(handleNavigation(request));
+        event.respondWith(handleNavigation(event));
         return;
     }
 

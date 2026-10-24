@@ -259,3 +259,67 @@
     transition-duration: 1ms !important;
   }
 }
+
+/* صفحهٔ شروع (AppSplash): تا بالا آمدن برنامه نمایش داده می‌شود */
+#app-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  background-color: var(--background);
+  transition: opacity 200ms ease-out, visibility 0ms linear 200ms;
+}
+
+#app-splash img {
+  border-radius: 18px;
+}
+
+.app-splash-spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  border: 2.5px solid var(--fill-strong);
+  border-top-color: var(--muted-foreground);
+  animation: app-splash-spin 800ms linear infinite;
+}
+
+#app-splash-retry {
+  display: none;
+  font: inherit;
+  font-weight: 600;
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 20px;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+[data-stuck] #app-splash-retry {
+  display: block;
+}
+
+[data-stuck] .app-splash-spinner {
+  display: none;
+}
+
+[data-ready] #app-splash {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@keyframes app-splash-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-splash-spinner {
+    animation: none;
+  }
+}

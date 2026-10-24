@@ -5,12 +5,14 @@ import { useEffect } from "react"
 import { useMoneyUnitStore } from "@/store/useMoneyUnitStore"
 
 // صفحاتی که برای کار آفلاین از قبل کش می‌شوند
-const OFFLINE_PAGES = ["/", "/logs", "/user", "/categories"]
+const OFFLINE_PAGES = ["/", "/logs", "/user", "/categories", "/goals"]
 
 function AppShell({ children, signedIn }: { children: React.ReactNode; signedIn: boolean }) {
   // واحد پول ذخیره‌شده بعد از mount خوانده می‌شود
   useEffect(() => {
     useMoneyUnitStore.persist.rehydrate()
+    // برنامه بالا آمد؛ صفحهٔ شروع (AppSplash) کنار می‌رود
+    document.documentElement.setAttribute("data-ready", "")
   }, [])
 
   useEffect(() => {

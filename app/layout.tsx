@@ -4,6 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import AppShell from "@/components/web/AppShell";
+import { AppSplash } from "@/components/web/AppSplash";
 import { AppViews } from "@/components/web/AppViews";
 import DataLoader from "@/components/web/DataLoader";
 import { AppHeader } from "@/components/web/AppHeader";
@@ -16,7 +17,7 @@ import { SwipeNav } from "@/components/web/SwipeNav";
 import { TabBar } from "@/components/web/TabBar";
 import { Toaster } from "@/components/web/Toaster";
 import { createClient } from "@/lib/supabase/server";
-import { installPromptScript } from "@/lib/pwa";
+import { installPromptScript, splashScript } from "@/lib/pwa";
 import { colorThemeScript } from "@/lib/themes";
 
 const vazirmatn = Vazirmatn({
@@ -68,10 +69,11 @@ export default async function RootLayout({
       <head>
         {/* قبل از اجرای React؛ با next/script تا React دربارهٔ تگ script هشدار ندهد */}
         <Script id="boot" strategy="beforeInteractive">
-          {colorThemeScript + installPromptScript}
+          {colorThemeScript + installPromptScript + splashScript}
         </Script>
       </head>
       <body className="font-sans" suppressHydrationWarning>
+        <AppSplash />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
