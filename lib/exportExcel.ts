@@ -154,10 +154,22 @@ export async function exportToExcel(
     styleHeader(catSheet)
 
     const buffer = await workbook.xlsx.writeBuffer()
-    const blob = new Blob([buffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    })
-    const url = URL.createObjectURL(blob)
+    const type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    const file = new File([buffer], fileName, { type })
+
+    // روی موبایل منوی اشتراک‌گذاری سیستم (با گزینهٔ ذخیره در فایل‌ها) به جای باز شدن مستقیم فایل
+    if (navigator.canShare?.({ files: [file] })) {
+        try {
+            await navigator.share({ files: [file], title: fileName })
+            return
+        } catch (err) {
+            // کاربر منو را بست
+            if (err instanceof DOMException && err.name === "AbortError") return
+            // مثلاً ساخت فایل طول کشید و مرورگر اجازهٔ share بدون لمس تازه را نداد؛ دانلود معمولی
+        }
+    }
+
+    const url = URL.createObjectURL(file)
     const link = document.createElement("a")
     link.href = url
     link.download = fileName
