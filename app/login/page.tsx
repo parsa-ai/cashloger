@@ -229,9 +229,21 @@ export default function LoginPage() {
               <div className="text-center">
                 <h1 className="text-[28px] font-bold">کش لاگر</h1>
                 <p className="mt-1 text-[15px] text-muted-foreground">
-                  {isSignUp ? 'یک حساب تازه بساز' : 'دخل و خرجت، همیشه دم دستت'}
+                  دخل و خرجت، همیشه دم دستت
                 </p>
               </div>
+              <Button type="button" size="lg" variant="secondary" className="w-full" onClick={handleGoogle} disabled={isLoading}>
+                <GoogleIcon />
+                ادامه با گوگل
+              </Button>
+
+              <div className="flex items-center gap-3 text-[13px] text-muted-foreground">
+                <span className="h-px flex-1 bg-separator" />
+                یا
+                <span className="h-px flex-1 bg-separator" />
+              </div>
+
+
 
               <Group footer={messageNode || undefined}>
                 {isSignUp ? (
@@ -310,19 +322,17 @@ export default function LoginPage() {
           {isLoading && <Loader2 className="animate-spin" />}
           {isSignUp ? 'ساخت حساب' : 'ورود'}
         </Button>
-
-        <div className="flex items-center gap-3 text-[13px] text-muted-foreground">
-          <span className="h-px flex-1 bg-separator" />
-          یا
-          <span className="h-px flex-1 bg-separator" />
-        </div>
-
-        <Button type="button" size="lg" variant="secondary" className="w-full" onClick={handleGoogle} disabled={isLoading}>
-          <GoogleIcon />
-          ادامه با گوگل
-        </Button>
-
-        <div className="flex flex-col items-center gap-1">
+        <div className="flex items-center justify-between gap-1">
+          <Button
+            type="button"
+            variant="plain"
+            size="nav"
+            className="font-medium"
+            onClick={() => switchMode(isSignUp ? 'login' : 'signup')}
+            disabled={isLoading}
+          >
+            {isSignUp ? 'حساب دارم، ورود' : 'ثبت‌نام'}
+          </Button>
           {canResend && !isSignUp && (
             <Button type="button" variant="plain" size="nav" onClick={handleResend} disabled={isLoading}>
               ارسال دوبارهٔ ایمیل تأیید
@@ -333,17 +343,10 @@ export default function LoginPage() {
               رمز عبورم یادم رفته
             </Button>
           )}
-          <Button
-            type="button"
-            variant="plain"
-            size="nav"
-            className="font-medium"
-            onClick={() => switchMode(isSignUp ? 'login' : 'signup')}
-            disabled={isLoading}
-          >
-            {isSignUp ? 'حساب دارم، ورود' : 'حساب ندارم، ثبت‌نام'}
-          </Button>
         </div>
+
+
+
       </form>
     </div>
   )
