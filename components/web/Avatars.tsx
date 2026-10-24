@@ -2,7 +2,7 @@
 
 import { Blobatar } from "@blobatar/react"
 import type { Expression } from "blobatar/expression"
-import { _layout, _parts } from "blobatar/internal"
+import { _layout, _marks, _parts } from "blobatar/internal"
 import "blobatar/motion.css"
 import { useMemo, type CSSProperties } from "react"
 
@@ -78,13 +78,66 @@ export function UserBlob({
 
 const r2 = (v: number) => Math.round(v * 100) / 100
 
-// گل صورتی تخت به سبک خود بلاب، با اندازه و جای حساب‌شده از هندسهٔ همان صورت
+type Pt = [number, number]
+
+// مسیر SVG بلاب (فقط M/L/H/V/C/Q/Z مطلق) به چندضلعی
+function flatten(d: string): Pt[][] {
+    const polys: Pt[][] = []
+    let poly: Pt[] = []
+    let cur: Pt = [0, 0]
+    for (const [, cmd, args] of d.matchAll(/([MLHVCQZ])([^MLHVCQZ]*)/g)) {
+        const n = args.trim() ? args.trim().split(/[\s,]+/).map(Number) : []
+        if (cmd === "M") {
+            if (poly.length) polys.push(poly)
+            cur = [n[0], n[1]]
+            poly = [cur]
+        } else if (cmd === "L") cur = [n[0], n[1]]
+        else if (cmd === "H") cur = [n[0], cur[1]]
+        else if (cmd === "V") cur = [cur[0], n[0]]
+        else if (cmd === "C" || cmd === "Q") {
+            const [x0, y0] = cur
+            for (let i = 1; i <= 8; i++) {
+                const t = i / 8, u = 1 - t
+                poly.push(cmd === "C"
+                    ? [u * u * u * x0 + 3 * u * u * t * n[0] + 3 * u * t * t * n[2] + t * t * t * n[4],
+                        u * u * u * y0 + 3 * u * u * t * n[1] + 3 * u * t * t * n[3] + t * t * t * n[5]]
+                    : [u * u * x0 + 2 * u * t * n[0] + t * t * n[2], u * u * y0 + 2 * u * t * n[1] + t * t * n[3]])
+            }
+            cur = cmd === "C" ? [n[4], n[5]] : [n[2], n[3]]
+            continue
+        }
+        if (cmd !== "Z") poly.push(cur)
+    }
+    if (poly.length) polys.push(poly)
+    return polys
+}
+
+function inPoly(poly: Pt[], x: number, y: number) {
+    let hit = false
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const [xi, yi] = poly[i], [xj, yj] = poly[j]
+        if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) hit = !hit
+    }
+    return hit
+}
+
+// تابع «داخل سر بلاب است؟» از روی شکل‌های واقعی سر (بدون چشم‌ها)
+function headHitTest(name: string, eyeCount: number) {
+    const marks = _marks(name).marks.slice(0, -eyeCount)
+    const circles = marks.flatMap((m) => (m.kind === "circle" ? [m] : []))
+    const polys = marks.flatMap((m) => (m.kind === "path" ? flatten(m.d) : []))
+    return (x: number, y: number) =>
+        circles.some((c) => Math.hypot(x - c.cx, y - c.cy) < c.r) || polys.some((p) => inPoly(p, x, y))
+}
+
+// گل صورتی تخت به سبک خود بلاب، روی لبهٔ واقعی سر بالای چشم چپ
 function flowerSvg(name: string) {
     const { face, eyes } = _layout(name)
+    const inside = headHitTest(name, eyes.length)
     const leftEye = eyes.reduce((a, b) => (a.cx <= b.cx ? a : b))
 
     // اندازه متناسب با چشم و پهنای صورت تا روی بلاب‌های کوچک‌صورت بزرگ نشود
-    let R = Math.max(7.5, Math.min(leftEye.ry * 1.7, face.rx * 0.42, 13))
+    let R = Math.max(7, Math.min(leftEye.ry * 1.5, face.rx * 0.36, 11.5))
 
     // فاصلهٔ نقطه تا نزدیک‌ترین چشم (مستطیل دور چشم)
     const clearance = (px: number, py: number) =>
@@ -93,32 +146,36 @@ function flowerSvg(name: string) {
             Math.max(0, Math.abs(py - e.cy) - e.ry),
         )))
 
-    // کمی داخل لبهٔ بالا-چپ سر، مثل گلی که لای مو گذاشته شده؛
-    // اولین زاویه‌ای که از چشم‌ها فاصله دارد، وگرنه بهترینِ موجود
+    // از بالای چشم چپ رو به بالا-چپ تا لبهٔ سر می‌رویم و گل را کمی داخل لبه می‌گذاریم،
+    // مثل گلی که لای مو گذاشته شده؛ اگر به چشم چسبید زاویهٔ کج‌تر امتحان می‌شود
     let x = 0
     let y = 0
+    let rot = 0
     let best = -1
-    for (const deg of [-128, -136, -120, -144, -112, -152, -104, -160]) {
+    for (const deg of [-118, -128, -108, -138, -148]) {
         const a = (deg * Math.PI) / 180
-        const px = face.cx + Math.cos(a) * face.rx * 0.82
-        const py = face.cy + Math.sin(a) * face.ry * 0.82
+        const dx = Math.cos(a)
+        const dy = Math.sin(a)
+        const sx = leftEye.cx
+        const sy = leftEye.cy - leftEye.ry
+        let t = 0
+        while (t < 70 && inside(sx + dx * t, sy + dy * t)) t += 0.25
+        const px = sx + dx * (t - R * 0.5)
+        const py = sy + dy * (t - R * 0.5)
         const c = clearance(px, py)
         if (c > best) {
             best = c
             x = px
             y = py
+            rot = deg + 90
         }
-        if (c >= R * 1.05) break
+        if (c >= R) break
     }
     // جا تنگ است (صورت‌های پهن و کوتاه): گل کوچک‌تر می‌شود
-    if (best < R * 1.05) R = Math.max(6, best / 1.05)
-    // داخل قاب گرد آواتار بماند
-    const d = Math.hypot(x - 50, y - 50)
-    const max = 48 - R
-    if (d > max) {
-        x = 50 + ((x - 50) * max) / d
-        y = 50 + ((y - 50) * max) / d
-    }
+    if (best < R) R = Math.max(5.5, best)
+    // داخل قاب ۱۰۰×۱۰۰ بماند
+    x = Math.min(Math.max(x, R + 1), 99 - R)
+    y = Math.min(Math.max(y, R + 1), 99 - R)
 
     const petals = (n: number, rx: number, ry: number, off: number, rot0: number, fill: string) =>
         Array.from({ length: n }, (_, i) =>
@@ -126,7 +183,7 @@ function flowerSvg(name: string) {
         ).join("")
 
     return (
-        `<g transform="translate(${r2(x)} ${r2(y)}) rotate(-18)">` +
+        `<g transform="translate(${r2(x)} ${r2(y)}) rotate(${r2(rot)})">` +
         petals(5, R * 0.42, R * 0.6, R * 0.5, 0, "#f9b4cf") +
         petals(5, R * 0.2, R * 0.36, R * 0.36, 36, "#e8578f") +
         `<circle r="${r2(R * 0.26)}" fill="#f6c453"/>` +
