@@ -155,52 +155,71 @@ export function isNetworkError(error: RemoteError | null, status?: number) {
     return /failed to fetch|networkerror|load failed|network request failed|fetch failed/i.test(error.message)
 }
 
-export type OpResult = { ok: true } | { ok: false; network: true } | { ok: false; network: false; message: string }
+export type OpResult =
+    | { ok: true }
+    // نرسید یا الان قبول نشد (اینترنت، خطای موقت سرور، نشست)؛ در صف می‌ماند و بعداً دوباره فرستاده می‌شود
+    | { ok: false; retry: true; network: boolean }
+    // سرور خود داده را رد کرد؛ فرستادن دوباره فایده ندارد
+    | { ok: false; retry: false; message: string }
+
+// خطای سرور، محدودیت تعداد درخواست یا توکن منقضی؛ مشکل از داده نیست
+function isTemporary(error: RemoteError, status: number) {
+    return status >= 500 || status === 401 || status === 408 || status === 429 || /^PGRST30/.test(error.code ?? "")
+}
 
 function toResult(error: RemoteError | null, status: number): OpResult {
     if (!error) return { ok: true }
-    if (isNetworkError(error, status)) return { ok: false, network: true }
-    return { ok: false, network: false, message: error.message }
+    if (isNetworkError(error, status)) return { ok: false, retry: true, network: true }
+    if (isTemporary(error, status)) return { ok: false, retry: true, network: false }
+    return { ok: false, retry: false, message: error.message }
+}
+
+// unknown: نشست باید تازه شود ولی نشد (معمولاً بی‌اینترنتی)، پس معلوم نیست کاربر خارج شده
+export async function sessionState(supabase: SupabaseClient): Promise<"active" | "missing" | "unknown"> {
+    try {
+        const { data, error } = await supabase.auth.getSession()
+        if (data.session) return "active"
+        return error ? "unknown" : "missing"
+    } catch {
+        return "unknown"
+    }
+}
+
+async function send(supabase: SupabaseClient, op: Op): Promise<{ error: RemoteError | null; status: number }> {
+    switch (op.type) {
+        case "tx.upsert": {
+            const { error, status } = await supabase.from("transactions").upsert(op.row, { onConflict: "id" })
+            // اگر دسته‌اش در این فاصله (مثلاً از دستگاه دیگر) حذف شده بود، بدون دسته ذخیره کن
+            if (error && op.row.category_id && (error.code === "42501" || error.code === "23503")) {
+                return supabase.from("transactions").upsert({ ...op.row, category_id: null }, { onConflict: "id" })
+            }
+            return { error, status }
+        }
+        case "tx.delete":
+            return supabase.from("transactions").delete().eq("id", op.id)
+        case "cat.upsert":
+            return supabase.from("categories").upsert(op.row, { onConflict: "id" })
+        case "cat.delete":
+            return supabase.from("categories").delete().eq("id", op.id)
+        case "goal.upsert":
+            return supabase.from("goals").upsert(op.row, { onConflict: "id" })
+        case "goal.delete":
+            return supabase.from("goals").delete().eq("id", op.id)
+    }
 }
 
 export async function runOp(supabase: SupabaseClient, op: Op): Promise<OpResult> {
     try {
-        switch (op.type) {
-            case "tx.upsert": {
-                const { error, status } = await supabase.from("transactions").upsert(op.row, { onConflict: "id" })
-                // اگر دسته‌اش در این فاصله (مثلاً از دستگاه دیگر) حذف شده بود، بدون دسته ذخیره کن
-                if (error && op.row.category_id && (error.code === "42501" || error.code === "23503")) {
-                    const retry = await supabase
-                        .from("transactions")
-                        .upsert({ ...op.row, category_id: null }, { onConflict: "id" })
-                    return toResult(retry.error, retry.status)
-                }
-                return toResult(error, status)
-            }
-            case "tx.delete": {
-                const { error, status } = await supabase.from("transactions").delete().eq("id", op.id)
-                return toResult(error, status)
-            }
-            case "cat.upsert": {
-                const { error, status } = await supabase.from("categories").upsert(op.row, { onConflict: "id" })
-                if (error?.code === "23505") {
-                    return { ok: false, network: false, message: `دسته‌بندی «${op.row.label}» از قبل وجود دارد` }
-                }
-                return toResult(error, status)
-            }
-            case "cat.delete": {
-                const { error, status } = await supabase.from("categories").delete().eq("id", op.id)
-                return toResult(error, status)
-            }
-            case "goal.upsert": {
-                const { error, status } = await supabase.from("goals").upsert(op.row, { onConflict: "id" })
-                return toResult(error, status)
-            }
-            case "goal.delete": {
-                const { error, status } = await supabase.from("goals").delete().eq("id", op.id)
-                return toResult(error, status)
-            }
+        const { error, status } = await send(supabase, op)
+        if (!error) return { ok: true }
+        // بدون نشست، دیتابیس هر نوشتنی را با 42501 رد می‌کند؛ این ایراد داده نیست و بعد از ورود دوباره فرستاده می‌شود
+        if (error.code === "42501" && (await sessionState(supabase)) !== "active") {
+            return { ok: false, retry: true, network: false }
         }
+        if (op.type === "cat.upsert" && error.code === "23505") {
+            return { ok: false, retry: false, message: `دسته‌بندی «${op.row.label}» از قبل وجود دارد` }
+        }
+        return toResult(error, status)
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         return toResult({ message }, 0)

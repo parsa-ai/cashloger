@@ -12,6 +12,7 @@ import {
   runOp,
   sameData,
   saveSnapshot,
+  sessionState,
 } from "@/lib/sync";
 import { Category, Goal, LogEntry, LogKind, YearlyLog } from "@/lib/types";
 import { getPersianYearMonth } from "@/lib/utils";
@@ -113,6 +114,9 @@ export const useLogStore = create<LogStore>()((set, get) => {
 
   const newOpId = () => crypto.randomUUID();
 
+  // پیام «دوباره وارد شو» فقط یک بار، نه با هر تلاش دوباره
+  let sessionWarned = false;
+
   return {
     ...emptyState,
     // سرور همیشه «آنلاین» رندر می‌کند؛ وضعیت واقعی بعد از mount در DataLoader خوانده می‌شود تا hydration یکی باشد
@@ -144,14 +148,28 @@ export const useLogStore = create<LogStore>()((set, get) => {
       set({ isSyncing: true });
 
       try {
+        // بدون نشست، نوشتن رد می‌شود و خواندن لیست خالی برمی‌گرداند که داده‌های محلی را پاک می‌کند؛
+        // صف دست‌نخورده می‌ماند تا کاربر دوباره وارد شود
+        const session = await sessionState(supabase);
+        if (get().userId !== userId) return;
+        if (session === "missing") {
+          if (get().queue.length > 0 && !sessionWarned) {
+            sessionWarned = true;
+            toast("برای ارسال تغییرات، دوباره وارد حسابت شو", "error");
+          }
+          return;
+        }
+        sessionWarned = false;
+
         // ۱) ارسال صف به ترتیب
         while (get().queue.length > 0) {
           const op = get().queue[0];
           const result = await runOp(supabase, op);
           if (get().userId !== userId) return;
 
-          if (!result.ok && result.network) {
-            set({ isOnline: false });
+          // در صف می‌ماند؛ DataLoader بعداً دوباره تلاش می‌کند
+          if (!result.ok && result.retry) {
+            if (result.network) set({ isOnline: false });
             return;
           }
           if (!result.ok) {
