@@ -51,20 +51,36 @@ export function UserBlob({
     size = 32,
     animate = true,
     expression,
+    accessory,
     className,
 }: {
     name: string
     size?: number
     animate?: boolean
     expression?: Expression
+    accessory?: boolean
     className?: string
 }) {
     return (
-        <span className={cn("block shrink-0 overflow-hidden rounded-full", className)} style={{ width: size, height: size }}>
-            {animate ? (
-                <Blobatar name={name} animate="always" expression={expression} className="size-full" />
-            ) : (
-                <Blobatar name={name} expression={expression} alt="" className="size-full" />
+        <span className={cn("relative block shrink-0", className)} style={{ width: size, height: size }}>
+            <span className="block size-full overflow-hidden rounded-full">
+                {animate ? (
+                    <Blobatar name={name} animate="always" expression={expression} className="size-full" />
+                ) : (
+                    <Blobatar name={name} expression={expression} alt="" className="size-full" />
+                )}
+            </span>
+            {/* گل تزئینی بالا-چپ صورت بلاب؛ بیرون از دایره تا لبه‌اش بریده نشود */}
+            {accessory && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                    src="/accessory-flower.webp"
+                    alt=""
+                    aria-hidden
+                    draggable={false}
+                    className="pointer-events-none absolute -rotate-12 select-none"
+                    style={{ width: size * 0.42, height: size * 0.42, top: size * 0.02, left: size * 0.04 }}
+                />
             )}
         </span>
     )

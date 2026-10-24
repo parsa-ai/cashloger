@@ -264,7 +264,7 @@ export function UserView() {
   return (
     <div className="space-y-6">
       <section className="flex flex-col items-center pt-2 text-center">
-        <UserBlob name={blobName} size={96} expression={isOnline ? idle : sleepy} />
+        <UserBlob name={blobName} size={96} expression={isOnline ? idle : sleepy} accessory />
         <h2 className="mt-3 text-[22px] font-semibold" dir="ltr">
           {username ? `@${username}` : 'کاربر کش لاگر'}
         </h2>
