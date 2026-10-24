@@ -76,22 +76,11 @@ export function UserBlob({
     )
 }
 
-// ترکیب خطی دو رنگ hex (t=0 → a، t=1 → b)
-function mix(a: string, b: string, t: number) {
-    const ch = (hex: string, i: number) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16)
-    return "#" + [0, 1, 2]
-        .map((i) => Math.round(ch(a, i) + (ch(b, i) - ch(a, i)) * t).toString(16).padStart(2, "0"))
-        .join("")
-}
-
 const r2 = (v: number) => Math.round(v * 100) / 100
 
-// گل تخت به سبک خود بلاب، با اندازه و جای حساب‌شده از هندسهٔ همان صورت
+// گل صورتی تخت به سبک خود بلاب، با اندازه و جای حساب‌شده از هندسهٔ همان صورت
 function flowerSvg(name: string) {
-    const l = _layout(name)
-    const { face, eyes, palette } = l
-    const head = palette.head ?? "#cccccc"
-    const eye = palette.eye ?? "#111111"
+    const { face, eyes } = _layout(name)
     const leftEye = eyes.reduce((a, b) => (a.cx <= b.cx ? a : b))
 
     // اندازه متناسب با چشم و پهنای صورت تا روی بلاب‌های کوچک‌صورت بزرگ نشود
@@ -131,26 +120,18 @@ function flowerSvg(name: string) {
         y = 50 + ((y - 50) * max) / d
     }
 
-    const outer = mix(head, "#ffffff", 0.82)
-    const inner = mix(head, eye, 0.16)
-    const core = mix("#f4c95d", head, 0.15)
     const petals = (n: number, rx: number, ry: number, off: number, rot0: number, fill: string) =>
         Array.from({ length: n }, (_, i) =>
             `<ellipse cx="0" cy="${r2(-off)}" rx="${r2(rx)}" ry="${r2(ry)}" transform="rotate(${r2(rot0 + (360 / n) * i)})" fill="${fill}"/>`,
         ).join("")
-    // ستارهٔ چهارپر کوچک
-    const sparkle = (sx: number, sy: number, s: number, delay: number) =>
-        `<path class="blob-twinkle" style="animation-delay:${delay}ms" fill="${core}" d="M${r2(sx)} ${r2(sy - s)}Q${r2(sx)} ${r2(sy)} ${r2(sx + s)} ${r2(sy)}Q${r2(sx)} ${r2(sy)} ${r2(sx)} ${r2(sy + s)}Q${r2(sx)} ${r2(sy)} ${r2(sx - s)} ${r2(sy)}Q${r2(sx)} ${r2(sy)} ${r2(sx)} ${r2(sy - s)}Z"/>`
 
     return (
         `<g transform="translate(${r2(x)} ${r2(y)}) rotate(-18)">` +
-        petals(5, R * 0.42, R * 0.6, R * 0.5, 0, outer) +
-        petals(5, R * 0.2, R * 0.36, R * 0.36, 36, inner) +
-        `<circle r="${r2(R * 0.26)}" fill="${core}"/>` +
+        petals(5, R * 0.42, R * 0.6, R * 0.5, 0, "#f9b4cf") +
+        petals(5, R * 0.2, R * 0.36, R * 0.36, 36, "#e8578f") +
+        `<circle r="${r2(R * 0.26)}" fill="#f6c453"/>` +
         `<circle cx="${r2(-R * 0.08)}" cy="${r2(-R * 0.08)}" r="${r2(R * 0.08)}" fill="#ffffff" opacity="0.8"/>` +
-        `</g>` +
-        sparkle(x + R * 1.15, y - R * 0.75, R * 0.3, 0) +
-        sparkle(x - R * 1.05, y + R * 0.95, R * 0.22, 1100)
+        `</g>`
     )
 }
 
